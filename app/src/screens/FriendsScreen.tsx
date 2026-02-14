@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useMemo} from 'react';
+import React, {useEffect, useState, useMemo, useCallback} from 'react';
 import {
   StyleSheet,
   View,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import {fetchFriends} from '../services/FriendsService';
 import type {Friend, Group} from '../services/FriendsService';
 
@@ -18,6 +19,7 @@ function FriendsScreen() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('alphabetical');
+  const navigation = useNavigation<any>();
 
   useEffect(() => {
     fetchFriends().then(data => {
@@ -77,6 +79,50 @@ function FriendsScreen() {
       .join(', ');
   };
 
+  const handleViewOnMap = useCallback(
+    (friend: Friend) => {
+      if (friend.lastLocation) {
+        navigation.navigate('Map', {
+          friendMarker: {
+            lat: friend.lastLocation.lat,
+            lng: friend.lastLocation.lng,
+            displayName: friend.displayName,
+          },
+        });
+      }
+    },
+    [navigation],
+  );
+
+  const handleViewProfile = useCallback(
+    (friend: Friend) => {
+      navigation.navigate('FriendProfile', {
+        displayName: friend.displayName,
+        username: friend.username,
+        lastLocation: friend.lastLocation,
+        lastLocationAt: friend.lastLocationAt,
+      });
+    },
+    [navigation],
+  );
+
+  const renderFriendActions = (item: Friend) => (
+    <View style={styles.actionRow}>
+      {item.lastLocation && (
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => handleViewOnMap(item)}>
+          <Text style={styles.actionButtonText}>View on Map</Text>
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity
+        style={styles.actionButton}
+        onPress={() => handleViewProfile(item)}>
+        <Text style={styles.actionButtonText}>View Profile</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -128,6 +174,7 @@ function FriendsScreen() {
               <Text style={styles.friendGroups}>
                 {getGroupLabels(item.groupIds)}
               </Text>
+              {renderFriendActions(item)}
             </View>
           )}
         />
@@ -141,6 +188,7 @@ function FriendsScreen() {
           renderItem={({item}) => (
             <View style={styles.friendCard}>
               <Text style={styles.friendName}>{item.displayName}</Text>
+              {renderFriendActions(item)}
             </View>
           )}
         />
@@ -211,6 +259,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 6,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  actionButton: {
+    backgroundColor: '#4a90d9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginRight: 8,
+  },
+  actionButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

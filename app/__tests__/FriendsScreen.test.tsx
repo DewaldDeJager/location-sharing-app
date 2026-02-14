@@ -1,11 +1,28 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
+import {NavigationContainer} from '@react-navigation/native';
 import FriendsScreen from '../src/screens/FriendsScreen';
+
+function renderWithNavigation() {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+  ReactTestRenderer.act(() => {
+    tree = ReactTestRenderer.create(
+      <NavigationContainer>
+        <FriendsScreen />
+      </NavigationContainer>,
+    );
+  });
+  return tree!;
+}
 
 test('renders friend names in alphabetical view', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer;
-  await ReactTestRenderer.act(() => {
-    tree = ReactTestRenderer.create(<FriendsScreen />);
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(
+      <NavigationContainer>
+        <FriendsScreen />
+      </NavigationContainer>,
+    );
   });
 
   const root = tree!.root;
@@ -20,8 +37,12 @@ test('renders friend names in alphabetical view', async () => {
 
 test('shows group labels in alphabetical view', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer;
-  await ReactTestRenderer.act(() => {
-    tree = ReactTestRenderer.create(<FriendsScreen />);
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(
+      <NavigationContainer>
+        <FriendsScreen />
+      </NavigationContainer>,
+    );
   });
 
   const root = tree!.root;
@@ -36,14 +57,17 @@ test('shows group labels in alphabetical view', async () => {
 
 test('switches to grouped view and shows section headers', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer;
-  await ReactTestRenderer.act(() => {
-    tree = ReactTestRenderer.create(<FriendsScreen />);
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(
+      <NavigationContainer>
+        <FriendsScreen />
+      </NavigationContainer>,
+    );
   });
 
   const root = tree!.root;
 
   // Find the "By Group" toggle button and press it
-  const touchables = root.findAllByType('View' as any);
   const allTexts = root.findAllByType('Text' as any);
   const byGroupText = allTexts.find(
     t => t.children && t.children.includes('By Group'),
@@ -56,7 +80,7 @@ test('switches to grouped view and shows section headers', async () => {
     node = node.parent;
   }
   expect(node).toBeTruthy();
-  await ReactTestRenderer.act(() => {
+  await ReactTestRenderer.act(async () => {
     node!.props.onPress();
   });
 
@@ -67,4 +91,45 @@ test('switches to grouped view and shows section headers', async () => {
   expect(updatedContents).toContain('Family');
   expect(updatedContents).toContain('Close Friends');
   expect(updatedContents).toContain('Friends');
+});
+
+test('renders View on Map button for friends with location', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(
+      <NavigationContainer>
+        <FriendsScreen />
+      </NavigationContainer>,
+    );
+  });
+
+  const root = tree!.root;
+  const texts = root.findAllByType('Text' as any);
+  const textContents = texts.map(t => t.children.join(''));
+
+  // Friends with location should have "View on Map" buttons
+  const viewOnMapCount = textContents.filter(t => t === 'View on Map').length;
+  // Mia, Liam, Sam have locations; Aisha does not
+  expect(viewOnMapCount).toBe(3);
+});
+
+test('renders View Profile button for every friend', async () => {
+  let tree: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    tree = ReactTestRenderer.create(
+      <NavigationContainer>
+        <FriendsScreen />
+      </NavigationContainer>,
+    );
+  });
+
+  const root = tree!.root;
+  const texts = root.findAllByType('Text' as any);
+  const textContents = texts.map(t => t.children.join(''));
+
+  // All 4 friends should have "View Profile" buttons
+  const viewProfileCount = textContents.filter(
+    t => t === 'View Profile',
+  ).length;
+  expect(viewProfileCount).toBe(4);
 });
