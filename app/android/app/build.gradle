@@ -84,6 +84,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [googleMapsApiKey: System.getenv("GOOGLE_MAPS_API_KEY") ?: ""]
     }
     signingConfigs {
         debug {
@@ -111,9 +112,20 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // Pin play-services-location to 21.0.1 for compatibility with react-native-geolocation-service.
+    // Newer versions (21.1.0+) changed FusedLocationProviderClient from a class to an interface,
+    // causing IncompatibleClassChangeError at runtime.
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force 'com.google.android.gms:play-services-location:21.0.1'
     }
 }

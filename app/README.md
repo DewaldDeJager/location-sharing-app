@@ -4,6 +4,25 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
+## Environment Variables
+
+### `GOOGLE_MAPS_API_KEY`
+
+A Google Maps API key is required for the map to work on Android. The key is read from the `GOOGLE_MAPS_API_KEY` environment variable at build time and is never hardcoded in source files.
+
+1. Create a key in the [Google Cloud Console](https://console.cloud.google.com/) under **APIs & Services → Credentials** (make sure the **Maps SDK for Android** is enabled).
+2. Set the environment variable before building:
+
+```sh
+# PowerShell
+$env:GOOGLE_MAPS_API_KEY = "your-api-key-here"
+
+# Bash
+export GOOGLE_MAPS_API_KEY="your-api-key-here"
+```
+
+Then proceed with the build steps below. If the variable is not set, the app will build but the map will not load correctly.
+
 ## Step 1: Start Metro
 
 First, you will need to run **Metro**, the JavaScript build tool for React Native.
