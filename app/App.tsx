@@ -11,6 +11,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import LaunchScreen from './src/screens/LaunchScreen';
 import MapScreen from './src/screens/MapScreen';
+import FriendsScreen from './src/screens/FriendsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -38,6 +39,7 @@ function App() {
       <NavigationContainer>
         <Tab.Navigator>
           <Tab.Screen name="Map" component={MapScreen} />
+          <Tab.Screen name="Friends" component={FriendsScreen} />
           <Tab.Screen name="Profile" component={ProfileScreen} />
         </Tab.Navigator>
       </NavigationContainer>
