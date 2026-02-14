@@ -9,11 +9,12 @@ import {
 } from 'react-native';
 import MapView, {Marker} from 'react-native-maps';
 import Geolocation from 'react-native-geolocation-service';
-
-type Location = {
-  latitude: number;
-  longitude: number;
-};
+import {
+  subscribeToLocation,
+  startLocationTracking,
+  stopLocationTracking,
+} from '../services/LocationService';
+import type {Location} from '../services/LocationService';
 
 async function requestLocationPermission(): Promise<boolean> {
   if (Platform.OS === 'ios') {
@@ -63,6 +64,8 @@ function MapScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
     (async () => {
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
@@ -70,19 +73,21 @@ function MapScreen() {
         return;
       }
 
-      Geolocation.getCurrentPosition(
-        position => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        err => {
-          setError(err.message);
-        },
-        {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
-      );
+      // Subscribe to live location updates from the service.
+      unsubscribe = subscribeToLocation(loc => {
+        setLocation(loc);
+      });
+
+      // Start tracking (no-op if already started).
+      startLocationTracking();
     })();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      stopLocationTracking();
+    };
   }, []);
 
   if (error) {
@@ -106,7 +111,7 @@ function MapScreen() {
     <View style={styles.container}>
       <MapView
         style={styles.map}
-        initialRegion={{
+        region={{
           latitude: location.latitude,
           longitude: location.longitude,
           latitudeDelta: 0.01,

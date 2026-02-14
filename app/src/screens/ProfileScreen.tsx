@@ -8,11 +8,12 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
-
-type Location = {
-  latitude: number;
-  longitude: number;
-};
+import {
+  subscribeToLocation,
+  startLocationTracking,
+  stopLocationTracking,
+} from '../services/LocationService';
+import type {Location} from '../services/LocationService';
 
 async function requestLocationPermission(): Promise<boolean> {
   if (Platform.OS === 'ios') {
@@ -62,6 +63,8 @@ function ProfileScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
     (async () => {
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
@@ -69,19 +72,21 @@ function ProfileScreen() {
         return;
       }
 
-      Geolocation.getCurrentPosition(
-        position => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        err => {
-          setError(err.message);
-        },
-        {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
-      );
+      // Subscribe to live location updates from the service.
+      unsubscribe = subscribeToLocation(loc => {
+        setLocation(loc);
+      });
+
+      // Start tracking (no-op if already started).
+      startLocationTracking();
     })();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      stopLocationTracking();
+    };
   }, []);
 
   return (
