@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   StyleSheet,
   View,
@@ -32,6 +32,10 @@ function MapScreen({route}: MapScreenProps) {
   const friendMarker = route?.params?.friendMarker ?? null;
   const initialRegionSet = useRef(false);
   const prevFriendMarkerRef = useRef<FriendMarker | null>(null);
+  // When true, the map will follow the currently focused subject (me or friend)
+  const [isFollowing, setIsFollowing] = useState<boolean>(true);
+  const [focusTarget, setFocusTarget] = useState<'me' | 'friend' | null>(null);
+  const isAnimatingRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToLocation(loc => {
@@ -54,11 +58,15 @@ function MapScreen({route}: MapScreenProps) {
         friendMarker?.lng !== prevFriendMarkerRef.current?.lng ||
         friendMarker?.displayName !== prevFriendMarkerRef.current?.displayName);
 
+    // Initial focus or when navigating to a specific friend: start following that target
     if (!initialRegionSet.current || friendMarkerChanged) {
       initialRegionSet.current = true;
       prevFriendMarkerRef.current = friendMarker;
-      const target = friendMarker
-        ? {latitude: friendMarker.lat, longitude: friendMarker.lng}
+      const focusingFriend = !!friendMarker;
+      setFocusTarget(focusingFriend ? 'friend' : 'me');
+      setIsFollowing(true);
+      const target = focusingFriend
+        ? {latitude: friendMarker!.lat, longitude: friendMarker!.lng}
         : {latitude: location.latitude, longitude: location.longitude};
       const newRegion: Region = {
         ...target,
@@ -67,26 +75,67 @@ function MapScreen({route}: MapScreenProps) {
       };
       setRegion(newRegion);
       if (mapRef.current) {
+        isAnimatingRef.current = true;
         mapRef.current.animateToRegion(newRegion, 500);
       }
+      return;
     }
-  }, [location, friendMarker]);
+
+    // While following "me", keep centering as my location updates
+    if (isFollowing && focusTarget === 'me') {
+      const myRegion: Region = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: region?.latitudeDelta ?? 0.01,
+        longitudeDelta: region?.longitudeDelta ?? 0.01,
+      };
+      setRegion(myRegion);
+      if (mapRef.current) {
+        isAnimatingRef.current = true;
+        mapRef.current.animateToRegion(myRegion, 300);
+      }
+    }
+  }, [location, friendMarker, isFollowing, focusTarget]);
 
   const handleMyLocation = () => {
     if (!location) {
       return;
     }
+    setIsFollowing(true);
+    setFocusTarget('me');
     const myRegion: Region = {
       latitude: location.latitude,
       longitude: location.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
+      latitudeDelta: region?.latitudeDelta ?? 0.01,
+      longitudeDelta: region?.longitudeDelta ?? 0.01,
     };
     if (mapRef.current) {
+      isAnimatingRef.current = true;
       mapRef.current.animateToRegion(myRegion, 500);
     }
     setRegion(myRegion);
   };
+
+  const handleRegionChangeComplete = useCallback(
+    (reg: Region, details?: {isGesture?: boolean}) => {
+      // Always update our region snapshot
+      setRegion(reg);
+
+      // If user interacted, stop following
+      if (details?.isGesture) {
+        setIsFollowing(false);
+        // keep current focusTarget but not following; alternatively we could null it
+        return;
+      }
+
+      // Ignore the callback that is a result of our own animateToRegion
+      if (isAnimatingRef.current) {
+        isAnimatingRef.current = false;
+        return;
+      }
+    },
+    [],
+  );
 
   if (!location || !region) {
     return (
@@ -103,7 +152,11 @@ function MapScreen({route}: MapScreenProps) {
         ref={mapRef}
         style={styles.map}
         region={region}
-        onRegionChangeComplete={setRegion}>
+        onRegionChangeComplete={handleRegionChangeComplete}
+        onPanDrag={() => {
+          // Fallback for platforms where details.isGesture might not be provided
+          setIsFollowing(false);
+        }}>
         <Marker
           coordinate={{
             latitude: location.latitude,
