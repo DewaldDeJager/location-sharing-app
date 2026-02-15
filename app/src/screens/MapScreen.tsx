@@ -1,6 +1,13 @@
-import React, {useEffect, useState} from 'react';
-import {StyleSheet, View, Text, ActivityIndicator} from 'react-native';
-import MapView, {Marker} from 'react-native-maps';
+import React, {useEffect, useRef, useState} from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
+import MapView, {Marker, Region} from 'react-native-maps';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {subscribeToLocation} from '../services/LocationService';
 import type {Location} from '../services/LocationService';
 
@@ -20,7 +27,11 @@ type MapScreenProps = {
 
 function MapScreen({route}: MapScreenProps) {
   const [location, setLocation] = useState<Location | null>(null);
+  const [region, setRegion] = useState<Region | null>(null);
+  const mapRef = useRef<MapView>(null);
   const friendMarker = route?.params?.friendMarker ?? null;
+  const initialRegionSet = useRef(false);
+  const prevFriendMarkerRef = useRef<FriendMarker | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToLocation(loc => {
@@ -32,7 +43,52 @@ function MapScreen({route}: MapScreenProps) {
     };
   }, []);
 
-  if (!location) {
+  useEffect(() => {
+    if (!location) {
+      return;
+    }
+
+    const friendMarkerChanged =
+      friendMarker !== prevFriendMarkerRef.current &&
+      (friendMarker?.lat !== prevFriendMarkerRef.current?.lat ||
+        friendMarker?.lng !== prevFriendMarkerRef.current?.lng ||
+        friendMarker?.displayName !== prevFriendMarkerRef.current?.displayName);
+
+    if (!initialRegionSet.current || friendMarkerChanged) {
+      initialRegionSet.current = true;
+      prevFriendMarkerRef.current = friendMarker;
+      const target = friendMarker
+        ? {latitude: friendMarker.lat, longitude: friendMarker.lng}
+        : {latitude: location.latitude, longitude: location.longitude};
+      const newRegion: Region = {
+        ...target,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setRegion(newRegion);
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(newRegion, 500);
+      }
+    }
+  }, [location, friendMarker]);
+
+  const handleMyLocation = () => {
+    if (!location) {
+      return;
+    }
+    const myRegion: Region = {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+    if (mapRef.current) {
+      mapRef.current.animateToRegion(myRegion, 500);
+    }
+    setRegion(myRegion);
+  };
+
+  if (!location || !region) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
@@ -41,23 +97,13 @@ function MapScreen({route}: MapScreenProps) {
     );
   }
 
-  const region = friendMarker
-    ? {
-        latitude: friendMarker.lat,
-        longitude: friendMarker.lng,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }
-    : {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-
   return (
     <View style={styles.container}>
-      <MapView style={styles.map} region={region}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        region={region}
+        onRegionChangeComplete={setRegion}>
         <Marker
           coordinate={{
             latitude: location.latitude,
@@ -78,6 +124,13 @@ function MapScreen({route}: MapScreenProps) {
           />
         )}
       </MapView>
+      <TouchableOpacity
+        style={styles.myLocationButton}
+        onPress={handleMyLocation}
+        accessibilityLabel="My Location"
+        testID="my-location-button">
+        <Ionicons name="navigate" size={24} color="#007AFF" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -93,6 +146,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  myLocationButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 16,
+    backgroundColor: '#ffffff',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
 });
 

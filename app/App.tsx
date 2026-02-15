@@ -6,6 +6,7 @@
 
 import React, {useState, useCallback} from 'react';
 import {StatusBar, useColorScheme} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
@@ -59,7 +60,20 @@ function App() {
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <NavigationContainer>
-        <Tab.Navigator>
+        <Tab.Navigator
+          screenOptions={({route}) => ({
+            tabBarIcon: ({color, size}) => {
+              let iconName = 'map-outline';
+              if (route.name === 'Map') {
+                iconName = 'map-outline';
+              } else if (route.name === 'Friends') {
+                iconName = 'people-outline';
+              } else if (route.name === 'Profile') {
+                iconName = 'person-outline';
+              }
+              return <Ionicons name={iconName} size={size} color={color} />;
+            },
+          })}>
           <Tab.Screen name="Map" component={MapScreen} />
           <Tab.Screen
             name="Friends"

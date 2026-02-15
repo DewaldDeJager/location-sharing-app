@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {StyleSheet, View, Text, ActivityIndicator} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {requestLocationPermission} from '../services/PermissionService';
 import {
   subscribeToLocation,
@@ -42,6 +43,7 @@ function LaunchScreen({onReady}: Props) {
 
   return (
     <View style={styles.container}>
+      <Ionicons name="location" size={64} color="#e74c3c" style={styles.logoIcon} />
       <Text style={styles.appName}>Location Sharing</Text>
       <ActivityIndicator size="large" style={styles.spinner} />
       <Text style={styles.status}>{status}</Text>
@@ -55,6 +57,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#ffffff',
+  },
+  logoIcon: {
+    marginBottom: 16,
   },
   appName: {
     fontSize: 32,
