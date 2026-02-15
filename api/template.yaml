@@ -175,6 +175,31 @@ Resources:
             Path: /health
             Method: GET
 
+  GetFriendsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/get-friends.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-get-friends"
+      Handler: get-friends.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+      Events:
+        GetFriends:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /friends
+            Method: GET
+
 Outputs:
   UserPoolId:
     Description: Cognito User Pool ID
