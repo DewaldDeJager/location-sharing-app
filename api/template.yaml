@@ -152,9 +152,17 @@ Resources:
   # ──────────────────────────────────────────────
   HealthFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/health.ts
     Properties:
       FunctionName: !Sub "location-sharing-${EnvironmentName}-health"
-      Handler: dist/handlers/health.handler
+      Handler: health.handler
       CodeUri: .
       Environment:
         Variables:
