@@ -1,29 +1,65 @@
 import {fetchFriends} from '../src/services/FriendsService';
+import {getAccessToken} from '../src/services/AuthService';
+import {AUTH_CONFIG} from '../src/config/auth';
 
-test('fetchFriends returns groups and friends', async () => {
-  const data = await fetchFriends();
+jest.mock('../src/services/AuthService');
 
-  expect(data.generatedAt).toBeDefined();
-  expect(data.groups.length).toBeGreaterThan(0);
-  expect(data.friends.length).toBeGreaterThan(0);
-});
+const MOCK_DATA = {
+  generatedAt: '2026-02-15T22:03:12Z',
+  groups: [
+    {id: 'g_family', name: 'Family', sortOrder: 10},
+    {id: 'g_close', name: 'Close Friends', sortOrder: 20},
+    {id: 'g_friends', name: 'Friends', sortOrder: 30},
+  ],
+  friends: [
+    {
+      id: 'f_001',
+      username: 'mia_nkosi',
+      displayName: 'Mia Nkosi',
+      lastLocation: {lat: -26.2041, lng: 28.0473},
+      lastLocationAt: '2026-02-15T21:58:41Z',
+      groupIds: ['g_close', 'g_friends'],
+    },
+  ],
+};
 
-test('each friend has required fields', async () => {
-  const data = await fetchFriends();
-
-  data.friends.forEach(friend => {
-    expect(friend.id).toBeDefined();
-    expect(friend.username).toBeDefined();
-    expect(friend.displayName).toBeDefined();
-    expect(Array.isArray(friend.groupIds)).toBe(true);
+describe('FriendsService', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (getAccessToken as jest.Mock).mockResolvedValue('fake-token');
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => MOCK_DATA,
+    });
   });
-});
 
-test('groups are sorted by sortOrder', async () => {
-  const data = await fetchFriends();
-  const sortOrders = data.groups.map(g => g.sortOrder);
+  test('fetchFriends calls API with token and returns data', async () => {
+    const data = await fetchFriends();
 
-  for (let i = 1; i < sortOrders.length; i++) {
-    expect(sortOrders[i]).toBeGreaterThan(sortOrders[i - 1]);
-  }
+    expect(getAccessToken).toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${AUTH_CONFIG.apiBaseUrl}/friends`,
+      expect.objectContaining({
+        headers: {
+          Authorization: 'Bearer fake-token',
+        },
+      }),
+    );
+    expect(data).toEqual(MOCK_DATA);
+  });
+
+  test('fetchFriends throws if not authenticated', async () => {
+    (getAccessToken as jest.Mock).mockResolvedValue(null);
+
+    await expect(fetchFriends()).rejects.toThrow('User is not authenticated');
+  });
+
+  test('fetchFriends throws if API call fails', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      statusText: 'Not Found',
+    });
+
+    await expect(fetchFriends()).rejects.toThrow('Failed to fetch friends: Not Found');
+  });
 });
