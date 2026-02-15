@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# AWS SAM
+.aws-sam/
+
+# Environment files
+.env
+.env.local
+
+# SAM deploy config (contains account-specific values)
+samconfig.toml
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
