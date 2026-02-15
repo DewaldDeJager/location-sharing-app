@@ -3,6 +3,7 @@ import {
   COGNITO_CLIENT_ID,
   COGNITO_REGION,
   API_BASE_URL,
+  APP_ENV,
 } from '@env';
 
 export const AUTH_CONFIG = {
@@ -16,6 +17,12 @@ export const AUTH_CONFIG = {
   revocationEndpoint: `${COGNITO_DOMAIN}/oauth2/revoke`,
 
   scopes: ['openid', 'email', 'profile'],
-  redirectUrl: 'myapp://auth/callback',
-  logoutRedirectUrl: 'myapp://auth/logout',
+  redirectUrl:
+    APP_ENV === 'development'
+      ? 'com.dearvolt.locationsharing.dev://auth/callback'
+      : 'com.dearvolt.locationsharing://auth/callback',
+  logoutRedirectUrl:
+    APP_ENV === 'development'
+      ? 'com.dearvolt.locationsharing.dev://auth/logout'
+      : 'com.dearvolt.locationsharing://auth/logout',
 };

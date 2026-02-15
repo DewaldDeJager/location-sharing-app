@@ -2,7 +2,7 @@ import {authorize, refresh, revoke} from 'react-native-app-auth';
 import * as Keychain from 'react-native-keychain';
 import {AUTH_CONFIG} from '../config/auth';
 
-const KEYCHAIN_SERVICE = 'com.locationsharingapp.auth';
+const KEYCHAIN_SERVICE = 'com.dearvolt.locationsharing.auth';
 
 type StoredTokens = {
   accessToken: string;

@@ -4,4 +4,5 @@ declare module '@env' {
   export const COGNITO_CLIENT_ID: string;
   export const COGNITO_REGION: string;
   export const API_BASE_URL: string;
+  export const APP_ENV: string;
 }

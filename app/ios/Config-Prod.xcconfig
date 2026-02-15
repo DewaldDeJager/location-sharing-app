@@ -1,0 +1,5 @@
+#include "Pods/Target Support Files/Pods-LocationSharingApp/Pods-LocationSharingApp.release.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = com.dearvolt.locationsharing
+APP_NAME = LocationSharing
+APP_AUTH_REDIRECT_SCHEME = com.dearvolt.locationsharing

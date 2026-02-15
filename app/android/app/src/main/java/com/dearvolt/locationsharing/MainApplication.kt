@@ -1,4 +1,4 @@
-package com.locationsharingapp
+package com.dearvolt.locationsharing
 
 import android.app.Application
 import com.facebook.react.PackageList

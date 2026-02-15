@@ -1,4 +1,4 @@
-package com.locationsharingapp
+package com.dearvolt.locationsharing
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
