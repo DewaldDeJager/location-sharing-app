@@ -60,11 +60,17 @@ Resources:
           RequireSymbols: false
       Schema:
         - Name: email
+          AttributeDataType: String
           Required: true
           Mutable: true
         - Name: name
+          AttributeDataType: String
           Required: false
           Mutable: true
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: "1"
 
   # ──────────────────────────────────────────────
   # Google Identity Provider
@@ -150,6 +156,9 @@ Resources:
       FunctionName: !Sub "location-sharing-${EnvironmentName}-health"
       Handler: dist/handlers/health.handler
       CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
       Events:
         GetHealth:
           Type: HttpApi
