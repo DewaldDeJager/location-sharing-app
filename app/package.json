@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android --mode devDebug --appIdSuffix dev",
+    "android:devRelease": "react-native run-android --mode devRelease --appIdSuffix dev",
     "android:prod": "react-native run-android --mode prodDebug",
     "clean": "react-native run-android --tasks clean",
     "ios": "APP_ENV=development react-native run-ios --mode Debug",
