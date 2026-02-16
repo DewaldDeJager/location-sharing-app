@@ -6,18 +6,28 @@ import {
   subscribeToLocation,
   startLocationTracking,
 } from '../services/LocationService';
+import DeviceService from '../services/DeviceService';
 
 type Props = {
   onReady: () => void;
 };
 
 function LaunchScreen({onReady}: Props) {
-  const [status, setStatus] = useState('Requesting permissions…');
+  const [status, setStatus] = useState('Initializing device…');
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
 
     (async () => {
+      // Ensure we have a stable device identifier stored before proceeding
+      try {
+        await DeviceService.ensureDeviceId();
+      } catch (e) {
+        // Non-fatal: proceed even if storage fails, but surface status
+        setStatus('Unable to initialize device ID');
+      }
+
+      setStatus('Requesting permissions…');
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
         setStatus('Location permission not granted');

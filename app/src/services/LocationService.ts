@@ -1,5 +1,6 @@
 import Geolocation from 'react-native-geolocation-service';
 import {apiFetch} from './ApiClient';
+import DeviceService from './DeviceService';
 
 export type Location = {
   latitude: number;
@@ -18,10 +19,27 @@ let lastLocation: Location | null = null;
  * Send the user's location to the backend.
  */
 export async function sendLocationToBackend(location: Location): Promise<void> {
+    console.log("Publishing location...")
+    // Include timestamp (ISO-8601) and deviceId in the payload
   try {
+    const timestamp = new Date().toISOString();
+    // Ensure a device ID exists; falls back to null-safe get if ensure somehow fails
+    let deviceId: string | null;
+    try {
+      deviceId = await DeviceService.ensureDeviceId();
+    } catch {
+      deviceId = await DeviceService.getDeviceId();
+    }
+
+    const payload = {
+      ...location,
+      timestamp,
+      deviceId: deviceId ?? undefined,
+    };
+
     const res = await apiFetch('/location', {
       method: 'POST',
-      body: location,
+      body: payload,
       asJson: true,
     });
     if (!res.ok) {
