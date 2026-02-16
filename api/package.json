@@ -5,13 +5,19 @@
   "scripts": {
     "build": "tsc",
     "clean": "rimraf dist",
-    "rebuild": "npm run clean && npm run build"
+    "rebuild": "npm run clean && npm run build",
+    "deployDev": "sam build && sam deploy --config-env dev"
   },
-  "dependencies": {},
+  "dependencies": {
+    "zod": "^3.23.8",
+    "@aws-sdk/client-dynamodb": "^3.991.0",
+    "@aws-sdk/lib-dynamodb": "^3.991.0"
+  },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.147",
-    "typescript": "^5.7.3",
+    "@types/aws-lambda": "^8.10.160",
+    "@types/node": "^25.2.3",
+    "esbuild": "^0.24.0",
     "rimraf": "^6.0.1",
-    "esbuild": "^0.24.0"
+    "typescript": "^5.7.3"
   }
 }

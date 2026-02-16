@@ -148,6 +148,67 @@ Resources:
                 - !Ref UserPoolClient
 
   # ──────────────────────────────────────────────
+  # JWT Authorizer (externalized for cross-resource reference)
+  # ──────────────────────────────────────────────
+#  CognitoJwtAuthorizer:
+#    Type: AWS::ApiGatewayV2::Authorizer
+#    Properties:
+#      ApiId: !Ref HttpApi
+#      AuthorizerType: JWT
+#      Name: DirectCognitoJwtAuthorizer
+#      IdentitySource:
+#        - $request.header.Authorization
+#      JwtConfiguration:
+#        Issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+#        Audience:
+#          - !Ref UserPoolClient
+
+  # ──────────────────────────────────────────────
+  # API to SQS Direct Integration
+  # ──────────────────────────────────────────────
+  ApiToSqsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ApiToSqsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: !GetAtt LocationQueue.Arn
+
+#  LocationQueueIntegration:
+#    Type: AWS::ApiGatewayV2::Integration
+#    Properties:
+#      ApiId: !Ref HttpApi
+#      IntegrationType: AWS_PROXY
+#      IntegrationSubtype: SQS-SendMessage
+#      CredentialsArn: !GetAtt ApiToSqsRole.Arn
+#      PayloadFormatVersion: "1.0"
+#      RequestParameters:
+#        QueueUrl: !Ref LocationQueue
+#        MessageBody: $request.body
+#        MessageGroupId: $context.authorizer.jwt.claims.sub
+#        MessageDeduplicationId: $context.requestId
+
+#  PostLocationRoute:
+#    Type: AWS::ApiGatewayV2::Route
+#    Properties:
+#      ApiId: !Ref HttpApi
+#      RouteKey: "POST /location"
+#      Target: !Sub "integrations/${LocationQueueIntegration}"
+#      AuthorizationType: JWT
+#      AuthorizerId: !Ref CognitoJwtAuthorizer
+
+  # ──────────────────────────────────────────────
   # Lambda Functions
   # ──────────────────────────────────────────────
   HealthFunction:
@@ -199,6 +260,57 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /friends
             Method: GET
+
+  ProcessLocationFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/process-location.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-process-location"
+      Handler: process-location.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          LOCATION_TABLE_NAME: !Ref LocationDataTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref LocationDataTable
+      Events:
+        ProcessLocation:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /location
+            Method: POST
+
+  # ──────────────────────────────────────────────
+  # SQS Queue
+  # ──────────────────────────────────────────────
+  LocationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "location-sharing-${EnvironmentName}-location-queue.fifo"
+      FifoQueue: true
+      ContentBasedDeduplication: true
+
+  # ──────────────────────────────────────────────
+  # DynamoDB Tables
+  # ──────────────────────────────────────────────
+  LocationDataTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: LocationData
+      PrimaryKey:
+        Name: userId
+        Type: String
+
 
 Outputs:
   UserPoolId:
