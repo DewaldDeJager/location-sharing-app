@@ -1,4 +1,5 @@
 import Geolocation from 'react-native-geolocation-service';
+import {apiFetch} from './ApiClient';
 
 export type Location = {
   latitude: number;
@@ -14,17 +15,22 @@ let listeners: LocationListener[] = [];
 let lastLocation: Location | null = null;
 
 /**
- * Stub for sending the user's location to the backend.
- * Replace this implementation with a real API call when the backend is ready.
+ * Send the user's location to the backend.
  */
 export async function sendLocationToBackend(location: Location): Promise<void> {
-  // TODO: Replace with actual API call, e.g.:
-  // await fetch('https://api.example.com/location', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(location),
-  // });
-  console.log('[LocationService] Sending location to backend:', location);
+  try {
+    const res = await apiFetch('/location', {
+      method: 'POST',
+      body: location,
+      asJson: true,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.warn('[LocationService] Failed to send location:', res.status, res.statusText, text);
+    }
+  } catch (e: any) {
+    console.warn('[LocationService] Error sending location:', e?.message || String(e));
+  }
 }
 
 /**
