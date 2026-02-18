@@ -46,6 +46,8 @@
 	</dict>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs your location even when in the background to continuously track and share your position with other users.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs your location even when in the background to continuously track and share your position with other users.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app needs your location to show it on the map and share it with other users.</string>
 	<key>RCTNewArchEnabled</key>
