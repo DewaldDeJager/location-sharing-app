@@ -1,33 +1,46 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
   StyleSheet,
   View,
   Text,
   ActivityIndicator,
   TouchableOpacity,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
-import {subscribeToLocation} from '../services/LocationService';
-import type {Location} from '../services/LocationService';
-import {getTokens, getUserSub, getUserEmail} from '../services/AuthService';
+import {useFocusEffect} from '@react-navigation/native';
+import {getTokens, getUserSub, getUserEmail, getUserName} from '../services/AuthService';
+import {fetchProfile} from '../services/ProfileService';
+import type {ProfileResponse} from '../services/ProfileService';
 
 type Props = {
   onSignOut: () => void;
 };
 
 function ProfileScreen({onSignOut}: Props) {
-  const [location, setLocation] = useState<Location | null>(null);
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [userSub, setUserSub] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToLocation(loc => {
-      setLocation(loc);
-    });
-
-    return () => {
-      unsubscribe();
-    };
+  const loadProfile = useCallback(async () => {
+    try {
+      const data = await fetchProfile();
+      setProfile(data);
+    } catch (error) {
+      console.warn('Failed to fetch profile:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadProfile();
+  }, [loadProfile]);
 
   useEffect(() => {
     (async () => {
@@ -35,31 +48,68 @@ function ProfileScreen({onSignOut}: Props) {
       if (tokens?.idToken) {
         setUserSub(getUserSub(tokens.idToken));
         setUserEmail(getUserEmail(tokens.idToken));
+        setUserName(getUserName(tokens.idToken));
       }
     })();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [loadProfile])
+  );
+
+  const location = profile?.lastKnownLocation;
+
+  const DetailRow = ({label, value}: {label: string; value: string}) => (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}:</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }>
       <View style={styles.profileCard}>
         <Text style={styles.name}>
-          {userEmail ?? 'User'}
+          {userName ?? userEmail ?? 'User'}
         </Text>
-        {userSub && (
-          <Text style={styles.sub}>Sub: {userSub}</Text>
-        )}
-        <Text style={styles.label}>Current Coordinates</Text>
-        {location ? (
-          <View>
-            <Text style={styles.coordinate}>
-              Latitude: {location.latitude.toFixed(6)}
-            </Text>
-            <Text style={styles.coordinate}>
-              Longitude: {location.longitude.toFixed(6)}
-            </Text>
+
+        <View style={styles.detailsContainer}>
+          {userName && userEmail && (
+            <DetailRow label="Email" value={userEmail} />
+          )}
+          {userSub && (
+            <DetailRow label="User ID" value={userSub} />
+          )}
+          {profile?.deviceId && (
+            <DetailRow label="Device ID" value={profile.deviceId} />
+          )}
+        </View>
+
+        <View style={styles.separator} />
+
+        <Text style={styles.sectionTitle}>Current Location</Text>
+        {loading ? (
+          <ActivityIndicator size="small" color="#007AFF" />
+        ) : location ? (
+          <View style={styles.locationContainer}>
+            <DetailRow label="Latitude" value={location.latitude.toFixed(6)} />
+            <DetailRow label="Longitude" value={location.longitude.toFixed(6)} />
+            {location.formattedAddress && (
+              <DetailRow label="Address" value={location.formattedAddress} />
+            )}
+            {location.timeZoneName && (
+              <DetailRow label="Time Zone" value={location.timeZoneName} />
+            )}
           </View>
         ) : (
-          <ActivityIndicator size="small" />
+          <Text style={styles.noLocation}>No location data available</Text>
         )}
       </View>
 
@@ -69,16 +119,19 @@ function ProfileScreen({onSignOut}: Props) {
         testID="sign-out-button">
         <Text style={styles.signOutButtonText}>Sign Out</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  contentContainer: {
     alignItems: 'center',
     paddingTop: 40,
-    backgroundColor: '#f5f5f5',
+    paddingBottom: 40,
   },
   profileCard: {
     backgroundColor: '#ffffff',
@@ -95,22 +148,51 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 16,
+    color: '#333',
+    textAlign: 'center',
   },
-  sub: {
-    fontSize: 12,
-    color: '#999',
+  detailsContainer: {
+    width: '100%',
     marginBottom: 16,
   },
-  label: {
-    fontSize: 16,
-    color: '#666',
+  detailRow: {
+    flexDirection: 'row',
     marginBottom: 8,
+    width: '100%',
+    alignItems: 'flex-start',
   },
-  coordinate: {
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+    width: 85,
+  },
+  detailValue: {
     fontSize: 14,
     color: '#333',
-    marginBottom: 4,
+    flex: 1,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#eee',
+    width: '100%',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#444',
+    marginBottom: 12,
+    alignSelf: 'center',
+  },
+  locationContainer: {
+    width: '100%',
+  },
+  noLocation: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
   signOutButton: {
     marginTop: 24,

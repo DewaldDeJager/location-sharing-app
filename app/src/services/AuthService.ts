@@ -188,6 +188,15 @@ export function getUserEmail(idToken: string): string | null {
 }
 
 /**
+ * Get the current user's name from the stored ID token.
+ * Returns null if no valid ID token is available.
+ */
+export function getUserName(idToken: string): string | null {
+  const payload = decodeJwtPayload(idToken);
+  return payload?.name ?? null;
+}
+
+/**
  * Retrieve the stored tokens without refreshing.
  */
 export async function getTokens(): Promise<StoredTokens | null> {
