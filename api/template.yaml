@@ -290,6 +290,38 @@ Resources:
             Path: /location
             Method: POST
 
+  GetProfileFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/get-profile.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-get-profile"
+      Handler: get-profile.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          LOCATION_TABLE_NAME: !Ref LocationDataTable
+          GOOGLE_CONFIG_PARAMETER_NAME: !Sub "/location-sharing-app/${EnvironmentName}/google-config"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref LocationDataTable
+        - SSMParameterReadPolicy:
+            ParameterName: !Sub "location-sharing-app/${EnvironmentName}/google-config"
+      Events:
+        GetProfile:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /profile
+            Method: GET
+
   # ──────────────────────────────────────────────
   # SQS Queue
   # ──────────────────────────────────────────────
