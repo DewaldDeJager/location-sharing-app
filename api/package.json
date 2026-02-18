@@ -6,12 +6,14 @@
     "build": "tsc",
     "clean": "rimraf dist",
     "rebuild": "npm run clean && npm run build",
-    "deployDev": "sam build && sam deploy --config-env dev"
+    "deployDev": "sam build && sam deploy"
   },
   "dependencies": {
-    "zod": "^3.23.8",
     "@aws-sdk/client-dynamodb": "^3.991.0",
-    "@aws-sdk/lib-dynamodb": "^3.991.0"
+    "@aws-sdk/client-ssm": "^3.993.0",
+    "@aws-sdk/lib-dynamodb": "^3.991.0",
+    "axios": "^1.13.5",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.160",
