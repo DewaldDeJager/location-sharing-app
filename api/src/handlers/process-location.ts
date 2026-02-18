@@ -95,7 +95,7 @@ export const handler = async (
     await docClient.send(
       new UpdateCommand({
         TableName: tableName,
-        Key: { userId: sub },
+        Key: { userId: sub }, // TODO: Add the device ID here once we have added it as the sort key
         UpdateExpression:
           "SET #lat = :lat, #lng = :lng, #ts = :ts, #deviceId = :deviceId, #tsIso = :tsIso",
         ExpressionAttributeNames: {
@@ -137,8 +137,7 @@ export const handler = async (
   }
 
   return {
-    statusCode: 200,
-    headers: { "Content-Type": "application/json" },
-    body: event.body,
+    statusCode: 204,
+    headers: { "Content-Type": "application/json" }
   };
 };
