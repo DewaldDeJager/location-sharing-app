@@ -322,6 +322,151 @@ Resources:
             Path: /profile
             Method: GET
 
+  ListGroupsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/groups/list-groups.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-list-groups"
+      Handler: groups/list-groups.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetHealth:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups
+            Method: GET
+
+  GetGroupFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/groups/get-group.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-get-group"
+      Handler: groups/get-group.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetHealth:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups/{id}
+            Method: GET
+
+  UpdateGroupFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/groups/update-group.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-update-group"
+      Handler: groups/update-group.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetHealth:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups/{id}
+            Method: PATCH
+
+  CreateGroupFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/groups/create-group.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-create-group"
+      Handler: groups/create-group.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetHealth:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups
+            Method: POST
+
+  RemoveGroupFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/groups/remove-group.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-remove-group"
+      Handler: groups/remove-group.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetHealth:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups/{id}
+            Method: DELETE
+
   # ──────────────────────────────────────────────
   # SQS Queue
   # ──────────────────────────────────────────────
@@ -342,6 +487,22 @@ Resources:
       PrimaryKey:
         Name: userId
         Type: String
+
+  SocialGraphTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: SocialGraph
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: sortKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: sortKey
+          KeyType: RANGE
 
 
 Outputs:
