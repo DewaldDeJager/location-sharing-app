@@ -236,7 +236,7 @@ Resources:
             Path: /health
             Method: GET
 
-  GetFriendsFunction:
+  ListFriendsFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: esbuild
@@ -245,14 +245,18 @@ Resources:
         Target: "es2022"
         Sourcemap: true
         EntryPoints:
-          - src/handlers/get-friends.ts
+          - src/handlers/friends/list-friends.ts
     Properties:
-      FunctionName: !Sub "location-sharing-${EnvironmentName}-get-friends"
-      Handler: get-friends.handler
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-list-friends"
+      Handler: friends/list-friends.handler
       CodeUri: .
       Environment:
         Variables:
           ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref SocialGraphTable
       Events:
         GetFriends:
           Type: HttpApi
@@ -260,6 +264,122 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /friends
             Method: GET
+
+  GetFriendFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/friends/get-friend.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-get-friend"
+      Handler: friends/get-friend.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetFriends:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /friends/{id}
+            Method: GET
+
+  AddFriendFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/friends/add-friend.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-add-friend"
+      Handler: friends/add-friend.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetFriends:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /friends
+            Method: POST
+
+  UpdateFriendFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/friends/update-friend.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-update-friend"
+      Handler: friends/update-friend.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetFriends:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /friends/{id}
+            Method: PATCH
+
+  RemoveFriendFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/friends/remove-friend.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-remove-friend"
+      Handler: friends/remove-friend.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        GetFriends:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /friends/{id}
+            Method: DELETE
 
   ProcessLocationFunction:
     Type: AWS::Serverless::Function
