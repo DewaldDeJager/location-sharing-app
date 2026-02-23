@@ -7,38 +7,38 @@ Here is a view of some of the features of the app (Not all are built yet but we 
 
 1. Location tracking via app geolocation
 2. Location sharing controls
-	2. Exact location
-	3. "Rough" location
-	4. City
-	5. Country
-	6. Timezone
+   1. Exact location
+   2. "Rough" location
+   3. City
+   4. Country
+   5. Timezone
 3. User profiles
-	1. Usernames
-	2. Phone number
+   1. Usernames
+   2. Phone number
 4. Friends
-	4. Invite by username
-	5. Find by phone number
-	6. Invite links
-	7. Friends list
-	8. Groups
+   1. Invite by username
+   2. Find by phone number
+   3. Invite links
+   4. Friends list
+   5. Groups
 5. Categories
-	6. Family, Extended Family, Relatives, Close Friends, Friends, and Acquaintances
-	7. Public/Other
-	8. Can be added, removed, customized
+   1. Family, Extended Family, Relatives, Close Friends, Friends, and Acquaintances
+   2. Public/Other
+   3. Can be added, removed, customized
 6. Geographic zones
-	7. Home, work, or any other area you choose
+   1. Home, work, or any other area you choose
 7. Map view
 8. Authentication
-	4. Username + password
-	5. Login with social
+   1. Username + password
+   2. Login with social
 9. Rule-based sharing
-	2. Categories
-	3. Geographic areas
-		4. Share when I'm in this area
-		5. Share only these areas
-		6. Rules defined for zones always take priority over the general category rules.
-	4. Time-based rules
-	5. Individuals
+   1. Categories
+   2. Geographic areas
+      1. Share when I'm in this area
+      2. Share only these areas
+      3. Rules defined for zones always take priority over the general category rules.
+   3. Time-based rules
+   4. Individuals
 
 # Tech Stack
 
