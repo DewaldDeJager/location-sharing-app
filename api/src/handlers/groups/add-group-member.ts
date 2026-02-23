@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, TransactWriteCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -40,7 +40,42 @@ export const handler = async (
   const { groupId, memberId } = parsedParams.data;
   const tableName = process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
 
-  // TODO: Add validation so that you can only add a member to group if you follow them
+  let followResult, groupResult;
+  try {
+    [followResult, groupResult] = await Promise.all([
+      docClient.send(new GetCommand({
+        TableName: tableName,
+        Key: { userId: sub, sortKey: `FOLLOW#${memberId}` },
+      })),
+      docClient.send(new GetCommand({
+        TableName: tableName,
+        Key: { userId: sub, sortKey: `GROUP#${groupId}` },
+      })),
+    ]);
+  } catch (err: any) {
+    console.error("DynamoDB get error", err);
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "Internal Server Error" }),
+    };
+  }
+
+  if (!followResult.Item) {
+    return {
+      statusCode: 403,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "Forbidden: you must be following the member to add them to a group" }),
+    };
+  }
+
+  if (!groupResult.Item) {
+    return {
+      statusCode: 404,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "Not Found: group does not exist" }),
+    };
+  }
 
   try {
     await docClient.send(
