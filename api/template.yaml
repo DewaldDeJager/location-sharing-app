@@ -587,6 +587,76 @@ Resources:
             Path: /groups/{id}
             Method: DELETE
 
+  AddGroupMemberFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/groups/add-group-member.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-add-group-member"
+      Handler: groups/add-group-member.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        AddMemberToGroup:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups/{groupId}/members/{memberId}
+            Method: PUT
+        AddGroupForMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /friends/{memberId}/groups/{groupId}
+            Method: PUT
+
+  RemoveGroupMemberFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/groups/remove-group-member.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-remove-group-member"
+      Handler: groups/remove-group-member.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SocialGraphTable
+      Events:
+        RemoveMemberToGroup:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /groups/{groupId}/members/{memberId}
+            Method: DELETE
+        RemoveGroupForMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /friends/{memberId}/groups/{groupId}
+            Method: DELETE
+
   # ──────────────────────────────────────────────
   # SQS Queue
   # ──────────────────────────────────────────────
