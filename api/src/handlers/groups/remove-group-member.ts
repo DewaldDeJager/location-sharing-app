@@ -33,7 +33,10 @@ export const handler = async (
     return {
       statusCode: 400,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: "Invalid path parameters", issues: parsedParams.error.format() }),
+      body: JSON.stringify({
+        message: "Invalid path parameters",
+        issues: parsedParams.error.format(),
+      }),
     };
   }
 
@@ -67,8 +70,8 @@ export const handler = async (
         ],
       })
     );
-  } catch (err: any) {
-    if (err && err.name === "TransactionCanceledException") {
+  } catch (err) {
+    if (err instanceof Error && err.name === "TransactionCanceledException") {
       return {
         statusCode: 404,
         headers: { "Content-Type": "application/json" },

@@ -6,7 +6,6 @@ import { z } from "zod";
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(client);
 
-
 export type LocationEvent = {
   latitude: number;
   longitude: number;
@@ -17,7 +16,11 @@ export type LocationEvent = {
 // Zod schema: validate and transform in one step
 const LocationEventSchema = z
   .object({
-    latitude: z.number().finite().min(-90, { message: "latitude >= -90" }).max(90, { message: "latitude <= 90" }),
+    latitude: z
+      .number()
+      .finite()
+      .min(-90, { message: "latitude >= -90" })
+      .max(90, { message: "latitude <= 90" }),
     longitude: z
       .number()
       .finite()
@@ -35,9 +38,8 @@ const LocationEventSchema = z
     timestampMs: Date.parse(v.timestamp),
   }));
 
-
 export const handler = async (
-    event: APIGatewayProxyEventV2WithJWTAuthorizer
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> => {
   const claims = event.requestContext.authorizer.jwt.claims;
   const sub = claims.sub as string | undefined;
@@ -118,8 +120,8 @@ export const handler = async (
         ReturnValues: "NONE",
       })
     );
-  } catch (err: any) {
-    if (err && err.name === "ConditionalCheckFailedException") {
+  } catch (err) {
+    if (err instanceof Error && err.name === "ConditionalCheckFailedException") {
       // Incoming timestamp is not newer than existing
       return {
         statusCode: 409,
@@ -138,6 +140,6 @@ export const handler = async (
 
   return {
     statusCode: 204,
-    headers: { "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json" },
   };
 };

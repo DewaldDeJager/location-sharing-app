@@ -1,6 +1,13 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, DeleteCommand, QueryCommand, QueryCommandOutput, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  DeleteCommand,
+  NativeAttributeValue,
+  QueryCommand,
+  QueryCommandOutput,
+  TransactWriteCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -41,7 +48,7 @@ export const handler = async (
 
   // Query all group membership items: sortKey begins with `GROUP#${id}#MEMBER#`
   const membershipItems: { userId: string; sortKey: string }[] = [];
-  let lastEvaluatedKey: Record<string, any> | undefined = undefined;
+  let lastEvaluatedKey: Record<string, NativeAttributeValue> | undefined = undefined;
 
   let queryResult: QueryCommandOutput;
   do {
@@ -81,7 +88,7 @@ export const handler = async (
           })),
         })
       );
-    } catch (err: any) {
+    } catch (err) {
       console.error("DynamoDB transact write error while deleting membership items", err);
       return {
         statusCode: 500,
@@ -103,8 +110,8 @@ export const handler = async (
         ReturnValues: "NONE",
       })
     );
-  } catch (err: any) {
-    if (err && err.name === "ConditionalCheckFailedException") {
+  } catch (err) {
+    if (err instanceof Error && err.name === "ConditionalCheckFailedException") {
       return {
         statusCode: 404,
         headers: { "Content-Type": "application/json" },
@@ -121,6 +128,6 @@ export const handler = async (
 
   return {
     statusCode: 204,
-    headers: { "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json" },
   };
 };

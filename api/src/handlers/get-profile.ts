@@ -53,7 +53,7 @@ interface TimezoneResponse {
 }
 
 export const handler = async (
-    event: APIGatewayProxyEventV2WithJWTAuthorizer
+  event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> => {
   const claims = event.requestContext.authorizer.jwt.claims;
   const sub = claims.sub as string | undefined;
@@ -76,7 +76,7 @@ export const handler = async (
         Key: { userId: sub }, // TODO: Add the device ID here once we have added it as the sort key
       })
     );
-  } catch (err: any) {
+  } catch (err) {
     console.error("DynamoDB get error", err);
     return {
       statusCode: 500,

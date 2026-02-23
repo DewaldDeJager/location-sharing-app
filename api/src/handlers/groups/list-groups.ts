@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand, NativeAttributeValue } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(client);
@@ -37,7 +37,7 @@ export const handler = async (
       })
     );
 
-    const groups = (res.Items || []).map((item: any) => {
+    const groups = (res.Items || []).map((item: Record<string, NativeAttributeValue>) => {
       const sortKey: string = item.sortKey as string;
       const id = sortKey.startsWith("GROUP#") ? sortKey.substring(6) : sortKey;
       return { id, name: item.name };

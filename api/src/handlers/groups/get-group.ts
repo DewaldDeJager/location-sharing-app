@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, NativeAttributeValue } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -55,7 +55,7 @@ export const handler = async (
       };
     }
 
-    const name = (res.Item as any).name;
+    const name = (res.Item as Record<string, NativeAttributeValue>).name;
 
     return {
       statusCode: 200,

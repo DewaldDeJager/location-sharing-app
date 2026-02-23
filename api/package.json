@@ -7,6 +7,10 @@
     "clean": "rimraf dist",
     "rebuild": "npm run clean && npm run build",
     "deployDev": "sam build && sam deploy"
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.991.0",
@@ -16,10 +20,16 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/aws-lambda": "^8.10.160",
     "@types/node": "^25.2.3",
     "esbuild": "^0.24.0",
+    "eslint": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.1",
     "rimraf": "^6.0.1",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.56.1"
   }
 }

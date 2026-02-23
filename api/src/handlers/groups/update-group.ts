@@ -33,7 +33,10 @@ export const handler = async (
     return {
       statusCode: 400,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: "Invalid path parameters", issues: parsedParams.error.format() }),
+      body: JSON.stringify({
+        message: "Invalid path parameters",
+        issues: parsedParams.error.format(),
+      }),
     };
   }
 
@@ -88,8 +91,8 @@ export const handler = async (
         ReturnValues: "NONE",
       })
     );
-  } catch (err: any) {
-    if (err && err.name === "ConditionalCheckFailedException") {
+  } catch (err) {
+    if (err instanceof Error && err.name === "ConditionalCheckFailedException") {
       return {
         statusCode: 404,
         headers: { "Content-Type": "application/json" },

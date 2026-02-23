@@ -33,7 +33,10 @@ export const handler = async (
     return {
       statusCode: 400,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: "Invalid path parameters", issues: parsedParams.error.format() }),
+      body: JSON.stringify({
+        message: "Invalid path parameters",
+        issues: parsedParams.error.format(),
+      }),
     };
   }
 
@@ -43,16 +46,20 @@ export const handler = async (
   let followResult, groupResult;
   try {
     [followResult, groupResult] = await Promise.all([
-      docClient.send(new GetCommand({
-        TableName: tableName,
-        Key: { userId: sub, sortKey: `FOLLOW#${memberId}` },
-      })),
-      docClient.send(new GetCommand({
-        TableName: tableName,
-        Key: { userId: sub, sortKey: `GROUP#${groupId}` },
-      })),
+      docClient.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: { userId: sub, sortKey: `FOLLOW#${memberId}` },
+        })
+      ),
+      docClient.send(
+        new GetCommand({
+          TableName: tableName,
+          Key: { userId: sub, sortKey: `GROUP#${groupId}` },
+        })
+      ),
     ]);
-  } catch (err: any) {
+  } catch (err) {
     console.error("DynamoDB get error", err);
     return {
       statusCode: 500,
@@ -65,7 +72,9 @@ export const handler = async (
     return {
       statusCode: 403,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: "Forbidden: you must be following the member to add them to a group" }),
+      body: JSON.stringify({
+        message: "Forbidden: you must be following the member to add them to a group",
+      }),
     };
   }
 
@@ -102,7 +111,7 @@ export const handler = async (
         ],
       })
     );
-  } catch (err: any) {
+  } catch (err) {
     console.error("DynamoDB transact write error", err);
     return {
       statusCode: 500,
