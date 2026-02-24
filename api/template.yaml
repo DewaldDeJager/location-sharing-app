@@ -657,6 +657,34 @@ Resources:
             Path: /friends/{memberId}/groups/{groupId}
             Method: DELETE
 
+  PostConfirmationHookFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: "es2022"
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/user-profile-post-confirmation-hook.ts
+    Properties:
+      FunctionName: !Sub "location-sharing-${EnvironmentName}-user-profile-post-confirmation-hook"
+      Handler: user-profile-post-confirmation-hook.handler
+      CodeUri: .
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+          USER_PROFILE_TABLE_NAME: !Ref UserProfileTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref UserProfileTable
+      Events:
+        PostConfirmation:
+          Type: Cognito
+          Properties:
+            UserPool: !Ref UserPool
+            Trigger: PostConfirmation
+
   # ──────────────────────────────────────────────
   # SQS Queue
   # ──────────────────────────────────────────────
@@ -694,6 +722,26 @@ Resources:
         - AttributeName: sortKey
           KeyType: RANGE
 
+  UserProfileTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UserProfile
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: username
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UsernameIndex
+          KeySchema:
+            - AttributeName: username
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
 
 Outputs:
   UserPoolId:
