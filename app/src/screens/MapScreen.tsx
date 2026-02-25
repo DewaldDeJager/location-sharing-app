@@ -1,13 +1,10 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native';
+import {ActivityIndicator, TouchableOpacity} from 'react-native';
 import MapView, {Marker, Region} from 'react-native-maps';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import {useTheme} from '@shopify/restyle';
+import {Screen, Box, Text} from '../theme';
+import type {Theme} from '../theme';
 import {subscribeToLocation} from '../services/LocationService';
 import type {Location} from '../services/LocationService';
 
@@ -26,6 +23,7 @@ type MapScreenProps = {
 };
 
 function MapScreen({route}: MapScreenProps) {
+  const theme = useTheme<Theme>();
   const [location, setLocation] = useState<Location | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
   const mapRef = useRef<MapView>(null);
@@ -139,15 +137,18 @@ function MapScreen({route}: MapScreenProps) {
 
   if (!location || !region) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text>Loading location...</Text>
-      </View>
+      <Screen>
+        <Box flex={1} justifyContent="center" alignItems="center">
+          <ActivityIndicator size="large" />
+          <Text>Loading location...</Text>
+        </Box>
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
+      <Box flex={1}>
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -182,24 +183,17 @@ function MapScreen({route}: MapScreenProps) {
         onPress={handleMyLocation}
         accessibilityLabel="My Location"
         testID="my-location-button">
-        <Ionicons name="navigate" size={24} color="#007AFF" />
+        <Ionicons name="navigate" size={24} color={theme.colors.primary} />
       </TouchableOpacity>
-    </View>
+      </Box>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+const styles = {
   map: {
     flex: 1,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  } as const,
   myLocationButton: {
     position: 'absolute',
     bottom: 24,
@@ -215,7 +209,7 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-});
+  } as const,
+};
 
 export default MapScreen;

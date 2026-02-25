@@ -1,14 +1,10 @@
 import React, {useEffect, useState, useCallback} from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  ActivityIndicator,
-  TouchableOpacity,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
+import {ScrollView, RefreshControl, ActivityIndicator} from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTheme} from '@shopify/restyle';
+import {Screen, Box, Text, Button} from '../theme';
+import type {Theme} from '../theme';
 import {getTokens, getUserSub, getUserEmail, getUserName} from '../services/AuthService';
 import {fetchProfile} from '../services/ProfileService';
 import type {ProfileResponse} from '../services/ProfileService';
@@ -18,6 +14,8 @@ type Props = {
 };
 
 function ProfileScreen({onSignOut}: Props) {
+  const theme = useTheme<Theme>();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [userSub, setUserSub] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -62,150 +60,93 @@ function ProfileScreen({onSignOut}: Props) {
   const location = profile?.lastKnownLocation;
 
   const DetailRow = ({label, value}: {label: string; value: string}) => (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}:</Text>
-      <Text style={styles.detailValue}>{value}</Text>
-    </View>
+    <Box flexDirection="row" marginBottom="s" width="100%" alignItems="flex-start">
+      <Text variant="caption" style={{width: 85, fontWeight: 'bold'}}>{label}:</Text>
+      <Text variant="body" style={{flex: 1, fontSize: 14}}>{value}</Text>
+    </Box>
+  );
+
+  const header = (
+    <Box
+      paddingHorizontal="l"
+      paddingVertical="m"
+      style={{paddingTop: insets.top + theme.spacing.m}}>
+      <Text variant="title">Profile</Text>
+    </Box>
   );
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }>
-      <View style={styles.profileCard}>
-        <Text style={styles.name}>
-          {userName ?? userEmail ?? 'User'}
-        </Text>
+    <Screen>
+      {header}
+      <ScrollView
+        contentContainerStyle={{
+          alignItems: 'center',
+          paddingHorizontal: theme.spacing.l,
+          paddingBottom: theme.spacing.xl,
+        }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }>
+        <Box
+          backgroundColor="card"
+          borderRadius="m"
+          padding="xl"
+          width="100%"
+          alignItems="center"
+          style={{
+            shadowColor: theme.colors.black,
+            shadowOffset: {width: 0, height: 2},
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }}>
+          <Text variant="title" marginBottom="m" style={{textAlign: 'center'}}>
+            {userName ?? userEmail ?? 'User'}
+          </Text>
 
-        <View style={styles.detailsContainer}>
-          {userName && userEmail && (
-            <DetailRow label="Email" value={userEmail} />
-          )}
-          {userSub && (
-            <DetailRow label="User ID" value={userSub} />
-          )}
-          {profile?.deviceId && (
-            <DetailRow label="Device ID" value={profile.deviceId} />
-          )}
-        </View>
-
-        <View style={styles.separator} />
-
-        <Text style={styles.sectionTitle}>Current Location</Text>
-        {loading ? (
-          <ActivityIndicator size="small" color="#007AFF" />
-        ) : location ? (
-          <View style={styles.locationContainer}>
-            <DetailRow label="Latitude" value={location.latitude.toFixed(6)} />
-            <DetailRow label="Longitude" value={location.longitude.toFixed(6)} />
-            {location.formattedAddress && (
-              <DetailRow label="Address" value={location.formattedAddress} />
+          <Box width="100%" marginBottom="m">
+            {userName && userEmail && (
+              <DetailRow label="Email" value={userEmail} />
             )}
-            {location.timeZoneName && (
-              <DetailRow label="Time Zone" value={location.timeZoneName} />
+            {userSub && (
+              <DetailRow label="User ID" value={userSub} />
             )}
-          </View>
-        ) : (
-          <Text style={styles.noLocation}>No location data available</Text>
-        )}
-      </View>
+            {profile?.deviceId && (
+              <DetailRow label="Device ID" value={profile.deviceId} />
+            )}
+          </Box>
 
-      <TouchableOpacity
-        style={styles.signOutButton}
-        onPress={onSignOut}
-        testID="sign-out-button">
-        <Text style={styles.signOutButtonText}>Sign Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          <Box height={1} backgroundColor="border" width="100%" marginBottom="m" />
+
+          <Text variant="subtitle" marginBottom="m">Current Location</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          ) : location ? (
+            <Box width="100%">
+              <DetailRow label="Latitude" value={location.latitude.toFixed(6)} />
+              <DetailRow label="Longitude" value={location.longitude.toFixed(6)} />
+              {location.formattedAddress && (
+                <DetailRow label="Address" value={location.formattedAddress} />
+              )}
+              {location.timeZoneName && (
+                <DetailRow label="Time Zone" value={location.timeZoneName} />
+              )}
+            </Box>
+          ) : (
+            <Text variant="caption" style={{fontStyle: 'italic'}}>No location data available</Text>
+          )}
+        </Box>
+
+        <Box marginTop="xl" width="100%">
+          <Button
+            label="Sign Out"
+            onPress={onSignOut}
+            variant="danger"
+          />
+        </Box>
+      </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  contentContainer: {
-    alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 40,
-  },
-  profileCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 24,
-    width: '85%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333',
-    textAlign: 'center',
-  },
-  detailsContainer: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    width: '100%',
-    alignItems: 'flex-start',
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#666',
-    width: 85,
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#eee',
-    width: '100%',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 12,
-    alignSelf: 'center',
-  },
-  locationContainer: {
-    width: '100%',
-  },
-  noLocation: {
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-  },
-  signOutButton: {
-    marginTop: 24,
-    backgroundColor: '#e74c3c',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-  },
-  signOutButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 
 export default ProfileScreen;

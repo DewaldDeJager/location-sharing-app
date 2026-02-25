@@ -179,7 +179,7 @@ function App() {
                 return <Ionicons name={iconName} size={size} color={color} />;
               },
             })}>
-            <Tab.Screen name="Map" component={MapScreen} />
+            <Tab.Screen name="Map" component={MapScreen} options={{headerShown: false}} />
             <Tab.Screen
               name="People"
               component={PeopleStackScreen}
@@ -195,7 +195,7 @@ function App() {
               component={SharingRulesOverviewScreen}
               options={{headerShown: false}}
             />
-            <Tab.Screen name="Profile">
+            <Tab.Screen name="Profile" options={{headerShown: false}}>
               {() => <ProfileScreen onSignOut={handleSignOut} />}
             </Tab.Screen>
           </Tab.Navigator>
