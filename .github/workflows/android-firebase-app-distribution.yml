@@ -1,0 +1,223 @@
+name: Android Release & Firebase App Distribution
+
+# ---------------------------------------------------------------------------
+# Triggers:
+#   - GitHub Release published (which creates a tag)
+#   - Tags matching v* pushed directly (e.g. v1.2.3, v1.0.0-alpha, v2.0.0-beta)
+#
+# Environment selection:
+#   - Tags with "-alpha" or "-beta" suffix  → "dev"  environment
+#   - All other v* tags (e.g. v1.2.3)       → "prod" environment
+# ---------------------------------------------------------------------------
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Determine which GitHub Environment to use based on the tag name.
+  # Outputs: environment ("dev" or "prod"), flavor ("dev" or "prod")
+  # ---------------------------------------------------------------------------
+  resolve-environment:
+    name: Resolve environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.resolve.outputs.environment }}
+      flavor: ${{ steps.resolve.outputs.flavor }}
+    steps:
+      - name: Resolve environment from tag
+        id: resolve
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" =~ -(alpha|beta) ]]; then
+            echo "environment=dev"  >> "$GITHUB_OUTPUT"
+            echo "flavor=dev"       >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=prod" >> "$GITHUB_OUTPUT"
+            echo "flavor=prod"      >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Build signed release APK + AAB, then distribute via Firebase App Distribution.
+  # ---------------------------------------------------------------------------
+  build-and-distribute:
+    name: Build & Distribute (${{ needs.resolve-environment.outputs.environment }})
+    needs: resolve-environment
+    runs-on: ubuntu-latest
+
+    # Use the resolved GitHub Environment so its secrets & variables are available.
+    environment: ${{ needs.resolve-environment.outputs.environment }}
+
+    env:
+      FLAVOR: ${{ needs.resolve-environment.outputs.flavor }}
+
+    defaults:
+      run:
+        working-directory: app/android
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Set up Node (needed for React Native JS bundling during Gradle build)
+      # -----------------------------------------------------------------------
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install Node dependencies
+        working-directory: app
+        run: npm ci --ignore-scripts
+
+      # -----------------------------------------------------------------------
+      # 3. Set up Java 17
+      # -----------------------------------------------------------------------
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+
+      # -----------------------------------------------------------------------
+      # 4. Cache Gradle files
+      # -----------------------------------------------------------------------
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('app/android/**/*.gradle*', 'app/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # -----------------------------------------------------------------------
+      # 5. Decode keystore and write keystore.properties
+      #    Secrets (set per-environment in GitHub):
+      #      ANDROID_KEYSTORE_BASE64    – base64-encoded .jks file
+      #      ANDROID_KEYSTORE_PASSWORD  – keystore password
+      #      ANDROID_KEY_ALIAS          – key alias
+      #      ANDROID_KEY_PASSWORD       – key password
+      # -----------------------------------------------------------------------
+      - name: Decode release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > app/release.keystore
+
+      - name: Write keystore.properties
+        run: |
+          printf 'RELEASE_STORE_FILE=app/release.keystore\n' > keystore.properties
+          printf 'RELEASE_STORE_PASSWORD=%s\n' "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> keystore.properties
+          printf 'RELEASE_KEY_ALIAS=%s\n'      "${{ secrets.ANDROID_KEY_ALIAS }}"          >> keystore.properties
+          printf 'RELEASE_KEY_PASSWORD=%s\n'   "${{ secrets.ANDROID_KEY_PASSWORD }}"        >> keystore.properties
+
+      # -----------------------------------------------------------------------
+      # 6. Make Gradle wrapper executable
+      # -----------------------------------------------------------------------
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # -----------------------------------------------------------------------
+      # 7. Build signed APK
+      #    Flavor variants: devRelease | prodRelease
+      # -----------------------------------------------------------------------
+      - name: Build signed APK
+        run: |
+          TASK="assemble${FLAVOR^}Release"
+          ./gradlew "$TASK" --no-daemon --stacktrace
+
+      # -----------------------------------------------------------------------
+      # 8. Build signed AAB
+      # -----------------------------------------------------------------------
+      - name: Build signed AAB
+        run: |
+          TASK="bundle${FLAVOR^}Release"
+          ./gradlew "$TASK" --no-daemon --stacktrace
+
+      # -----------------------------------------------------------------------
+      # 9. Locate build artifacts
+      # -----------------------------------------------------------------------
+      - name: Locate APK and AAB
+        id: artifacts
+        run: |
+          APK=$(find app/build/outputs/apk/${FLAVOR}/release -name "*.apk" | head -1)
+          AAB=$(find app/build/outputs/bundle/${FLAVOR}Release -name "*.aab" | head -1)
+          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
+          echo "aab_path=$AAB" >> "$GITHUB_OUTPUT"
+          echo "APK: $APK"
+          echo "AAB: $AAB"
+
+      # -----------------------------------------------------------------------
+      # 10. Upload APK to GitHub Release
+      # -----------------------------------------------------------------------
+      - name: Upload APK to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.artifacts.outputs.apk_path }}
+
+      # -----------------------------------------------------------------------
+      # 11. Upload APK as workflow artifact (available on every tag push too)
+      # -----------------------------------------------------------------------
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-${{ github.ref_name }}
+          path: ${{ steps.artifacts.outputs.apk_path }}
+          retention-days: 30
+
+      # -----------------------------------------------------------------------
+      # 12. Fetch GitHub Release notes (used as Firebase distribution notes)
+      # -----------------------------------------------------------------------
+      - name: Get release notes
+        id: release_notes
+        if: github.event_name == 'release'
+        run: |
+          NOTES=$(echo '${{ github.event.release.body }}' | head -c 1000)
+          echo "notes=$NOTES" >> "$GITHUB_OUTPUT"
+
+      - name: Set default release notes (tag push without release)
+        id: release_notes_default
+        if: github.event_name != 'release'
+        run: echo "notes=Release ${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------------
+      # 13. Decode Firebase service account JSON
+      #    Secret (set per-environment in GitHub):
+      #      FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 – base64-encoded service account JSON
+      # -----------------------------------------------------------------------
+      - name: Decode Firebase service account JSON
+        run: |
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 }}" | base64 --decode > /tmp/firebase-service-account.json
+
+      # -----------------------------------------------------------------------
+      # 14. Distribute AAB to Firebase App Distribution
+      #    Variables/Secrets (set per-environment in GitHub):
+      #      FIREBASE_APP_ID   – Firebase App Distribution app ID
+      #      FIREBASE_GROUPS   – comma-separated tester group names (e.g. "Beta")
+      # -----------------------------------------------------------------------
+      - name: Distribute to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ vars.FIREBASE_APP_ID }}
+          serviceCredentialsFile: /tmp/firebase-service-account.json
+          groups: ${{ vars.FIREBASE_GROUPS }}
+          releaseNotes: ${{ steps.release_notes.outputs.notes || steps.release_notes_default.outputs.notes }}
+          file: ${{ steps.artifacts.outputs.aab_path }}
+
+      # -----------------------------------------------------------------------
+      # 15. Clean up sensitive files
+      # -----------------------------------------------------------------------
+      - name: Clean up secrets
+        if: always()
+        run: |
+          rm -f app/release.keystore keystore.properties /tmp/firebase-service-account.json
