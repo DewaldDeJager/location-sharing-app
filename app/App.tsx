@@ -162,6 +162,7 @@ function App() {
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <NavigationContainer linking={linking}>
           <Tab.Navigator
+            initialRouteName="Map"
             screenOptions={({route}) => ({
               tabBarIcon: ({color, size}) => {
                 let iconName = 'map-outline';
@@ -172,14 +173,13 @@ function App() {
                 } else if (route.name === 'Groups') {
                   iconName = 'people-outline';
                 } else if (route.name === 'Sharing') {
-                  iconName = 'shield-outline';
+                  iconName = 'location-outline';
                 } else if (route.name === 'Profile') {
                   iconName = 'settings-outline';
                 }
                 return <Ionicons name={iconName} size={size} color={color} />;
               },
             })}>
-            <Tab.Screen name="Map" component={MapScreen} options={{headerShown: false}} />
             <Tab.Screen
               name="People"
               component={PeopleStackScreen}
@@ -190,6 +190,7 @@ function App() {
               component={GroupsStackScreen}
               options={{headerShown: false}}
             />
+            <Tab.Screen name="Map" component={MapScreen} options={{headerShown: false}} />
             <Tab.Screen
               name="Sharing"
               component={SharingRulesOverviewScreen}
