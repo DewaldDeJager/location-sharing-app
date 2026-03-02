@@ -151,8 +151,8 @@ jobs:
         run: |
           APK=$(find app/build/outputs/apk/${FLAVOR}/release -name "*.apk" | head -1)
           AAB=$(find app/build/outputs/bundle/${FLAVOR}Release -name "*.aab" | head -1)
-          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
-          echo "aab_path=$AAB" >> "$GITHUB_OUTPUT"
+          echo "apk_path=app/android/$APK" >> "$GITHUB_OUTPUT"
+          echo "aab_path=app/android/$AAB" >> "$GITHUB_OUTPUT"
           echo "APK: $APK"
           echo "AAB: $AAB"
 
@@ -220,4 +220,4 @@ jobs:
       - name: Clean up secrets
         if: always()
         run: |
-          rm -f app/release.keystore keystore.properties /tmp/firebase-service-account.json
+          rm -f release.keystore keystore.properties /tmp/firebase-service-account.json
