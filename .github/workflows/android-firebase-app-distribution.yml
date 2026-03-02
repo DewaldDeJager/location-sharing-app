@@ -191,33 +191,25 @@ jobs:
         run: echo "notes=Release ${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
       # -----------------------------------------------------------------------
-      # 13. Decode Firebase service account JSON
-      #    Secret (set per-environment in GitHub):
-      #      FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 – base64-encoded service account JSON
-      # -----------------------------------------------------------------------
-      - name: Decode Firebase service account JSON
-        run: |
-          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 }}" | base64 --decode > /tmp/firebase-service-account.json
-
-      # -----------------------------------------------------------------------
-      # 14. Distribute AAB to Firebase App Distribution
+      # 13. Distribute AAB to Firebase App Distribution
       #    Variables/Secrets (set per-environment in GitHub):
-      #      FIREBASE_APP_ID   – Firebase App Distribution app ID
-      #      FIREBASE_GROUPS   – comma-separated tester group names (e.g. "Beta")
+      #      FIREBASE_APP_ID                      – Firebase App Distribution app ID
+      #      FIREBASE_GROUPS                      – comma-separated tester group names (e.g. "Beta")
+      #      FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 – base64-encoded service account JSON
       # -----------------------------------------------------------------------
       - name: Distribute to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ vars.FIREBASE_APP_ID }}
-          serviceCredentialsFile: /tmp/firebase-service-account.json
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 }}
           groups: ${{ vars.FIREBASE_GROUPS }}
           releaseNotes: ${{ steps.release_notes.outputs.notes || steps.release_notes_default.outputs.notes }}
           file: ${{ steps.artifacts.outputs.aab_path }}
 
       # -----------------------------------------------------------------------
-      # 15. Clean up sensitive files
+      # 14. Clean up sensitive files
       # -----------------------------------------------------------------------
       - name: Clean up secrets
         if: always()
         run: |
-          rm -f release.keystore keystore.properties /tmp/firebase-service-account.json
+          rm -f release.keystore keystore.properties
