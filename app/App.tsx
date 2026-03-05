@@ -131,28 +131,34 @@ function App() {
 
   if (!isReady) {
     return (
-      <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <LaunchScreen onReady={handleReady} />
-      </SafeAreaProvider>
+      <ThemeProvider theme={theme}>
+        <SafeAreaProvider>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <LaunchScreen onReady={handleReady} />
+        </SafeAreaProvider>
+      </ThemeProvider>
     );
   }
 
   if (!authChecked) {
     return (
-      <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <LaunchScreen onReady={() => {}} />
-      </SafeAreaProvider>
+      <ThemeProvider theme={theme}>
+        <SafeAreaProvider>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <LaunchScreen onReady={() => {}} />
+        </SafeAreaProvider>
+      </ThemeProvider>
     );
   }
 
   if (!isLoggedIn) {
     return (
-      <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <LoginScreen onLoginSuccess={handleLoginSuccess} />
-      </SafeAreaProvider>
+      <ThemeProvider theme={theme}>
+        <SafeAreaProvider>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <LoginScreen onLoginSuccess={handleLoginSuccess} />
+        </SafeAreaProvider>
+      </ThemeProvider>
     );
   }
 

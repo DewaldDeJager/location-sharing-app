@@ -1,22 +1,16 @@
 import React, {useState} from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import {TouchableOpacity, ActivityIndicator, Alert} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import {useTheme} from '@shopify/restyle';
+import {Screen, Box, Text} from '../theme';
+import type {Theme} from '../theme';
 import {signIn} from '../services/AuthService';
-
 type Props = {
   onLoginSuccess: () => void;
 };
-
 function LoginScreen({onLoginSuccess}: Props) {
   const [loading, setLoading] = useState(false);
-
+  const theme = useTheme<Theme>();
   const handleSignIn = async () => {
     setLoading(true);
     try {
@@ -24,7 +18,7 @@ function LoginScreen({onLoginSuccess}: Props) {
       onLoginSuccess();
     } catch (error: any) {
       if (error?.message?.includes('User cancelled')) {
-        // User dismissed the login screen — do nothing
+        // User dismissed the login screen – do nothing
       } else {
         Alert.alert(
           'Sign In Failed',
@@ -35,70 +29,50 @@ function LoginScreen({onLoginSuccess}: Props) {
       setLoading(false);
     }
   };
-
   return (
-    <View style={styles.container}>
+    <Screen
+      justifyContent="center"
+      alignItems="center"
+      backgroundColor="white"
+      paddingHorizontal="xxl">
       <Ionicons
         name="location"
         size={64}
-        color="#e74c3c"
-        style={styles.logoIcon}
+        color={theme.colors.danger}
+        style={{marginBottom: theme.spacing.l}}
       />
-      <Text style={styles.appName}>Location Sharing</Text>
-      <Text style={styles.subtitle}>
+      <Text
+        variant="title"
+        fontSize={32}
+        marginBottom="s">
+        Location Sharing
+      </Text>
+      <Text
+        variant="body"
+        color="muted"
+        textAlign="center"
+        marginBottom="xxl">
         Sign in to share your location with friends
       </Text>
-
       <TouchableOpacity
-        style={styles.signInButton}
+        style={{
+          backgroundColor: theme.colors.primary,
+          paddingVertical: 14,
+          paddingHorizontal: 48,
+          borderRadius: theme.borderRadii.s,
+          minWidth: 200,
+          alignItems: 'center',
+        }}
         onPress={handleSignIn}
         disabled={loading}
         testID="sign-in-button">
         {loading ? (
-          <ActivityIndicator color="#ffffff" />
+          <ActivityIndicator color={theme.colors.white} />
         ) : (
-          <Text style={styles.signInButtonText}>Sign In</Text>
+          <Text variant="button" fontSize={18}>Sign In</Text>
         )}
       </TouchableOpacity>
-    </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 32,
-  },
-  logoIcon: {
-    marginBottom: 16,
-  },
-  appName: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 48,
-  },
-  signInButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 14,
-    paddingHorizontal: 48,
-    borderRadius: 8,
-    minWidth: 200,
-    alignItems: 'center',
-  },
-  signInButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});
-
 export default LoginScreen;
