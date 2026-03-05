@@ -136,28 +136,17 @@ jobs:
           ./gradlew "$TASK" --no-daemon --stacktrace
 
       # -----------------------------------------------------------------------
-      # 8. Build signed AAB
+      # 8. Locate build artifacts
       # -----------------------------------------------------------------------
-      - name: Build signed AAB
-        run: |
-          TASK="bundle${FLAVOR^}Release"
-          ./gradlew "$TASK" --no-daemon --stacktrace
-
-      # -----------------------------------------------------------------------
-      # 9. Locate build artifacts
-      # -----------------------------------------------------------------------
-      - name: Locate APK and AAB
+      - name: Locate APK
         id: artifacts
         run: |
           APK=$(find app/build/outputs/apk/${FLAVOR}/release -name "*.apk" | head -1)
-          AAB=$(find app/build/outputs/bundle/${FLAVOR}Release -name "*.aab" | head -1)
           echo "apk_path=app/android/$APK" >> "$GITHUB_OUTPUT"
-          echo "aab_path=app/android/$AAB" >> "$GITHUB_OUTPUT"
           echo "APK: $APK"
-          echo "AAB: $AAB"
 
       # -----------------------------------------------------------------------
-      # 10. Upload APK to GitHub Release
+      # 9. Upload APK to GitHub Release
       # -----------------------------------------------------------------------
       - name: Upload APK to GitHub Release
         if: github.event_name == 'release'
@@ -166,7 +155,7 @@ jobs:
           files: ${{ steps.artifacts.outputs.apk_path }}
 
       # -----------------------------------------------------------------------
-      # 11. Upload APK as workflow artifact (available on every tag push too)
+      # 10. Upload APK as workflow artifact (available on every tag push too)
       # -----------------------------------------------------------------------
       - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
@@ -176,7 +165,7 @@ jobs:
           retention-days: 30
 
       # -----------------------------------------------------------------------
-      # 12. Fetch GitHub Release notes (used as Firebase distribution notes)
+      # 11. Fetch GitHub Release notes (used as Firebase distribution notes)
       # -----------------------------------------------------------------------
       - name: Get release notes
         id: release_notes
@@ -191,7 +180,7 @@ jobs:
         run: echo "notes=Release ${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
       # -----------------------------------------------------------------------
-      # 13. Distribute AAB to Firebase App Distribution
+      # 12. Distribute AAB to Firebase App Distribution
       #    Variables/Secrets (set per-environment in GitHub):
       #      FIREBASE_APP_ID               – Firebase App Distribution app ID
       #      FIREBASE_GROUPS               – comma-separated tester group names (e.g. "Beta")
@@ -204,10 +193,10 @@ jobs:
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           groups: ${{ vars.FIREBASE_GROUPS }}
           releaseNotes: ${{ steps.release_notes.outputs.notes || steps.release_notes_default.outputs.notes }}
-          file: ${{ steps.artifacts.outputs.aab_path }}
+          file: ${{ steps.artifacts.outputs.apk_path }}
 
       # -----------------------------------------------------------------------
-      # 14. Clean up sensitive files
+      # 13. Clean up sensitive files
       # -----------------------------------------------------------------------
       - name: Clean up secrets
         if: always()
