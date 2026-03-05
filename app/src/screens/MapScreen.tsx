@@ -5,7 +5,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useTheme} from '@shopify/restyle';
 import {Screen, Box, Text} from '../theme';
 import type {Theme} from '../theme';
-import {subscribeToLocation} from '../services/LocationService';
+import {subscribeToLocation, startLocationTracking} from '../services/LocationService';
 import type {Location} from '../services/LocationService';
 
 type FriendMarker = {
@@ -39,6 +39,7 @@ function MapScreen({route}: MapScreenProps) {
     const unsubscribe = subscribeToLocation(loc => {
       setLocation(loc);
     });
+    startLocationTracking();
 
     return () => {
       unsubscribe();
@@ -104,8 +105,8 @@ function MapScreen({route}: MapScreenProps) {
     const myRegion: Region = {
       latitude: location.latitude,
       longitude: location.longitude,
-      latitudeDelta: region?.latitudeDelta ?? 0.01,
-      longitudeDelta: region?.longitudeDelta ?? 0.01,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
     };
     if (mapRef.current) {
       isAnimatingRef.current = true;
