@@ -11,9 +11,11 @@ type RuleEditorProps = {
   initialMode?: SharingMode;
   /** Called when user confirms a choice */
   onConfirm: (mode: SharingMode, temporaryMinutes?: number) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   /** Label for the confirm button (e.g. "Start sharing", "Update rule") */
   confirmLabel?: string;
+  /** When true, hides the Cancel / Confirm buttons and reports changes immediately */
+  hideButtons?: boolean;
 };
 
 type ModeOption = {
@@ -49,12 +51,30 @@ export function RuleEditor({
   onConfirm,
   onCancel,
   confirmLabel,
+  hideButtons = false,
 }: RuleEditorProps) {
   const theme = useTheme<Theme>();
   const [selectedMode, setSelectedMode] = useState<SharingMode>(initialMode);
   const [selectedMinutes, setSelectedMinutes] = useState<number | undefined>(
     TEMPORARY_PRESETS[1].minutes,
   );
+
+  const handleModeChange = (mode: SharingMode) => {
+    setSelectedMode(mode);
+    if (hideButtons) {
+      onConfirm(
+        mode,
+        mode === SharingMode.TEMPORARY ? selectedMinutes : undefined,
+      );
+    }
+  };
+
+  const handleMinutesChange = (minutes: number) => {
+    setSelectedMinutes(minutes);
+    if (hideButtons) {
+      onConfirm(selectedMode, minutes);
+    }
+  };
 
   const isUpdate = initialMode !== SharingMode.DISALLOWED;
   const buttonLabel =
@@ -77,7 +97,7 @@ export function RuleEditor({
         return (
           <TouchableOpacity
             key={opt.mode}
-            onPress={() => setSelectedMode(opt.mode)}
+            onPress={() => handleModeChange(opt.mode)}
             activeOpacity={0.7}>
             <Card
               marginVertical="xs"
@@ -131,7 +151,7 @@ export function RuleEditor({
               return (
                 <TouchableOpacity
                   key={preset.minutes}
-                  onPress={() => setSelectedMinutes(preset.minutes)}
+                  onPress={() => handleMinutesChange(preset.minutes)}
                   activeOpacity={0.7}
                   style={{flex: 1}}>
                   <Box
@@ -158,34 +178,40 @@ export function RuleEditor({
         </Box>
       )}
 
-      <Divider marginTop="l" />
+      {!hideButtons && (
+        <>
+          <Divider marginTop="l" />
 
-      <Box
-        flexDirection="row"
-        gap="s"
-        marginHorizontal="l"
-        marginTop="m"
-        marginBottom="s">
-        <Box flex={1}>
-          <Button label="Cancel" onPress={onCancel} variant="ghost" />
-        </Box>
-        <Box flex={2}>
-          <Button
-            label={buttonLabel}
-            onPress={() =>
-              onConfirm(
-                selectedMode,
-                selectedMode === SharingMode.TEMPORARY
-                  ? selectedMinutes
-                  : undefined,
-              )
-            }
-            variant={
-              selectedMode === SharingMode.DISALLOWED ? 'outline' : 'primary'
-            }
-          />
-        </Box>
-      </Box>
+          <Box
+            flexDirection="row"
+            gap="s"
+            marginHorizontal="l"
+            marginTop="m"
+            marginBottom="s">
+            <Box flex={1}>
+              <Button label="Cancel" onPress={onCancel!} variant="ghost" />
+            </Box>
+            <Box flex={2}>
+              <Button
+                label={buttonLabel}
+                onPress={() =>
+                  onConfirm(
+                    selectedMode,
+                    selectedMode === SharingMode.TEMPORARY
+                      ? selectedMinutes
+                      : undefined,
+                  )
+                }
+                variant={
+                  selectedMode === SharingMode.DISALLOWED
+                    ? 'outline'
+                    : 'primary'
+                }
+              />
+            </Box>
+          </Box>
+        </>
+      )}
     </Box>
   );
 }

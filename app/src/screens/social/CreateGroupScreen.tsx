@@ -90,11 +90,7 @@ export default function CreateGroupScreen() {
             setSelectedMode(mode);
             setTemporaryMinutes(minutes);
           }}
-          onCancel={() => {
-            setSelectedMode(SharingMode.DISALLOWED);
-            setTemporaryMinutes(undefined);
-          }}
-          confirmLabel="Set Rule"
+          hideButtons
         />
 
         <Divider marginVertical="l" marginHorizontal="l" />
