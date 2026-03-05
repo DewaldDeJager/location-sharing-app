@@ -15,6 +15,11 @@ import {ThemeProvider} from '@shopify/restyle';
 import {theme} from './src/theme';
 import LaunchScreen from './src/screens/LaunchScreen';
 import LoginScreen from './src/screens/LoginScreen';
+import LocationPermissionScreen from './src/screens/LocationPermissionScreen';
+import {
+  hasLocationPermission,
+  hasBackgroundLocationPermission,
+} from './src/services/PermissionService';
 import MapScreen from './src/screens/MapScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import {
@@ -104,6 +109,9 @@ function App() {
   const [isReady, setIsReady] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [locationPermissionGranted, setLocationPermissionGranted] =
+    useState(false);
+  const [permissionChecked, setPermissionChecked] = useState(false);
 
   const handleReady = useCallback(() => {
     setIsReady(true);
@@ -119,6 +127,22 @@ function App() {
       setAuthChecked(true);
     })();
   }, [isReady]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      return;
+    }
+    (async () => {
+      const hasFg = await hasLocationPermission();
+      const hasBg = await hasBackgroundLocationPermission();
+      setLocationPermissionGranted(hasFg && hasBg);
+      setPermissionChecked(true);
+    })();
+  }, [isLoggedIn]);
+
+  const handlePermissionGranted = useCallback(() => {
+    setLocationPermissionGranted(true);
+  }, []);
 
   const handleLoginSuccess = useCallback(() => {
     setIsLoggedIn(true);
@@ -157,6 +181,30 @@ function App() {
         <SafeAreaProvider>
           <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
           <LoginScreen onLoginSuccess={handleLoginSuccess} />
+        </SafeAreaProvider>
+      </ThemeProvider>
+    );
+  }
+
+  if (!permissionChecked) {
+    return (
+      <ThemeProvider theme={theme}>
+        <SafeAreaProvider>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <LaunchScreen onReady={() => {}} />
+        </SafeAreaProvider>
+      </ThemeProvider>
+    );
+  }
+
+  if (!locationPermissionGranted) {
+    return (
+      <ThemeProvider theme={theme}>
+        <SafeAreaProvider>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <LocationPermissionScreen
+            onPermissionGranted={handlePermissionGranted}
+          />
         </SafeAreaProvider>
       </ThemeProvider>
     );

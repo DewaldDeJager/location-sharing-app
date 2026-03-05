@@ -2,6 +2,40 @@ import {Platform, PermissionsAndroid} from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 
 /**
+ * Check whether foreground location permission has already been granted.
+ */
+export async function hasLocationPermission(): Promise<boolean> {
+  if (Platform.OS === 'ios') {
+    const status = await Geolocation.requestAuthorization('whenInUse');
+    return status === 'granted' || status === 'restricted';
+  }
+  if (Platform.OS === 'android') {
+    return PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    );
+  }
+  return false;
+}
+
+/**
+ * Check whether background location permission has already been granted.
+ */
+export async function hasBackgroundLocationPermission(): Promise<boolean> {
+  if (Platform.OS === 'ios') {
+    // On iOS "always" authorization covers background usage.
+    const status = await Geolocation.requestAuthorization('always');
+    return status === 'granted';
+  }
+  if (Platform.OS === 'android' && Number(Platform.Version) >= 29) {
+    return PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
+    );
+  }
+  // Android < 29 doesn't require a separate background permission.
+  return true;
+}
+
+/**
  * Request location and background location permissions.
  * Returns true if the required permissions were granted.
  */
