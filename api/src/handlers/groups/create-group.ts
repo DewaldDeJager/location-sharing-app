@@ -4,6 +4,7 @@ import { createGroup } from "../../services/group-service";
 
 const CreateGroupSchema = z.object({
   name: z.string().min(1, { message: "name is required" }).max(200, { message: "name too long" }),
+  members: z.array(z.string().uuid()).optional(),
 });
 
 export const handler = async (
@@ -49,7 +50,7 @@ export const handler = async (
   }
 
   try {
-    const group = await createGroup(sub, parsed.data.name);
+    const group = await createGroup(sub, parsed.data.name, parsed.data.members);
     return {
       statusCode: 201,
       headers: { "Content-Type": "application/json" },

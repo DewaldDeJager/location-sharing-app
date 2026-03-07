@@ -548,7 +548,7 @@ Resources:
           ENVIRONMENT: !Ref EnvironmentName
           SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
       Policies:
-        - DynamoDBWritePolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref SocialGraphTable
       Events:
         GetHealth:

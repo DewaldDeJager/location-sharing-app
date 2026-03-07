@@ -8,7 +8,8 @@ const ParamsSchema = z.object({
 });
 
 const BodySchema = z.object({
-  name: z.string().min(1, { message: "name is required" }).max(200, { message: "name too long" }),
+  name: z.string().min(1, { message: "name is required" }).max(200, { message: "name too long" }).optional(),
+  members: z.array(z.string().uuid()).optional(),
 });
 
 export const handler = async (
@@ -66,7 +67,7 @@ export const handler = async (
   }
 
   try {
-    const group = await updateGroup(sub, parsedParams.data.id, parsedBody.data.name);
+    const group = await updateGroup(sub, parsedParams.data.id, parsedBody.data.name, parsedBody.data.members);
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },

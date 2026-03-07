@@ -2,6 +2,7 @@
   "name": "location-sharing-api",
   "version": "1.0.0",
   "description": "Location Sharing API - AWS SAM backend for real-time location sharing",
+  "license": "MIT",
   "scripts": {
     "build": "tsc",
     "clean": "rimraf dist",

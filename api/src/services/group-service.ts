@@ -22,7 +22,7 @@ function getTableName(): string {
   return process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
 }
 
-export async function createGroup(userId: string, name: string): Promise<Group> {
+export async function createGroup(userId: string, name: string, members?: string[]): Promise<Group> {
   const id = randomUUID();
   const tableName = getTableName();
 
@@ -37,6 +37,16 @@ export async function createGroup(userId: string, name: string): Promise<Group> 
       ConditionExpression: "attribute_not_exists(userId) AND attribute_not_exists(sortKey)",
     })
   );
+
+  if (members) {
+    for (const memberId of members) {
+      try {
+        await addGroupMember(userId, id, memberId);
+      } catch (e: unknown) {
+        if (!(e instanceof ForbiddenError)) throw e;
+      }
+    }
+  }
 
   return { id, name };
 }
@@ -87,33 +97,88 @@ export async function listGroups(userId: string): Promise<Group[]> {
   });
 }
 
-export async function updateGroup(userId: string, id: string, name: string): Promise<Group> {
+export async function updateGroup(
+  userId: string,
+  id: string,
+  name?: string,
+  members?: string[]
+): Promise<Group> {
   const tableName = getTableName();
 
-  try {
-    await docClient.send(
-      new UpdateCommand({
-        TableName: tableName,
-        Key: {
-          userId,
-          sortKey: `GROUP#${id}`,
-        },
-        UpdateExpression: "SET #name = :name",
-        ExpressionAttributeNames: {
-          "#name": "name",
-        },
-        ExpressionAttributeValues: {
-          ":name": name,
-        },
-        ConditionExpression: "attribute_exists(userId) AND attribute_exists(sortKey)",
-        ReturnValues: "NONE",
-      })
-    );
-  } catch (err) {
-    if (err instanceof Error && err.name === "ConditionalCheckFailedException") {
-      throw new NotFoundError("Group not found");
+  if (name) {
+    try {
+      await docClient.send(
+        new UpdateCommand({
+          TableName: tableName,
+          Key: {
+            userId,
+            sortKey: `GROUP#${id}`,
+          },
+          UpdateExpression: "SET #name = :name",
+          ExpressionAttributeNames: {
+            "#name": "name",
+          },
+          ExpressionAttributeValues: {
+            ":name": name,
+          },
+          ConditionExpression: "attribute_exists(userId) AND attribute_exists(sortKey)",
+          ReturnValues: "NONE",
+        })
+      );
+    } catch (err) {
+      if (err instanceof Error && err.name === "ConditionalCheckFailedException") {
+        throw new NotFoundError("Group not found");
+      }
+      throw err;
     }
-    throw err;
+  }
+
+  if (members) {
+    // Retrieve current members
+    const currentMembers: string[] = [];
+    let lastEvaluatedKey: Record<string, NativeAttributeValue> | undefined = undefined;
+    const prefix = `GROUP#${id}#MEMBER#`;
+
+    do {
+      const result: QueryCommandOutput = await docClient.send(
+        new QueryCommand({
+          TableName: tableName,
+          KeyConditionExpression: "userId = :userId AND begins_with(sortKey, :prefix)",
+          ExpressionAttributeValues: {
+            ":userId": userId,
+            ":prefix": prefix,
+          },
+          ExclusiveStartKey: lastEvaluatedKey,
+        })
+      );
+
+      for (const item of result.Items ?? []) {
+        currentMembers.push((item.sortKey as string).replace(prefix, ""));
+      }
+
+      lastEvaluatedKey = result.LastEvaluatedKey;
+    } while (lastEvaluatedKey);
+
+    const desiredSet = new Set(members);
+    const currentSet = new Set(currentMembers);
+
+    // Add new members
+    for (const memberId of desiredSet) {
+      if (!currentSet.has(memberId)) {
+        try {
+          await addGroupMember(userId, id, memberId);
+        } catch (e: unknown) {
+          if (!(e instanceof ForbiddenError)) throw e;
+        }
+      }
+    }
+
+    // Remove members no longer in the list
+    for (const memberId of currentSet) {
+      if (!desiredSet.has(memberId)) {
+        await removeGroupMember(userId, id, memberId);
+      }
+    }
   }
 
   return { id, name };
