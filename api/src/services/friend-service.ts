@@ -11,6 +11,7 @@ import {
   NativeAttributeValue,
 } from "@aws-sdk/lib-dynamodb";
 import { Friend, NotFoundError } from "../domain/types";
+import { getUserProfile } from "./user-profile-service";
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(client);
@@ -57,9 +58,12 @@ export async function getFriend(userId: string, id: string): Promise<Friend> {
     throw new NotFoundError("Friend not found");
   }
 
+  const profile = await getUserProfile(id);
+  const name = result.Item.name ?? profile.name;
+
   return {
     id,
-    name: result.Item.name ?? null,
+    name,
   };
 }
 
@@ -78,11 +82,19 @@ export async function listFriends(
       },
     })
   );
+  
+  
 
-  return (result.Items ?? []).map((item) => ({
-    id: item.sortKey.replace("FOLLOW#", ""),
-    name: item.name,
-  }));
+  const friends = await Promise.all(
+    (result.Items ?? []).map(async (item) => {
+      const id = item.sortKey.replace("FOLLOW#", "");
+      const profile = await getUserProfile(id);
+      const name = item.name ?? profile.name;
+      return { id, name };
+    })
+  );
+
+  return friends;
 }
 
 export async function updateFriend(

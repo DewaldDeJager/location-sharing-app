@@ -254,9 +254,12 @@ Resources:
         Variables:
           ENVIRONMENT: !Ref EnvironmentName
           SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+          USER_PROFILE_TABLE_NAME: !Ref UserProfileTable
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref SocialGraphTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserProfileTable
       Events:
         GetFriends:
           Type: HttpApi
@@ -283,9 +286,12 @@ Resources:
         Variables:
           ENVIRONMENT: !Ref EnvironmentName
           SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
+          USER_PROFILE_TABLE_NAME: !Ref UserProfileTable
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref SocialGraphTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserProfileTable
       Events:
         GetFriends:
           Type: HttpApi
@@ -678,6 +684,8 @@ Resources:
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref UserProfileTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SocialGraphTable
       Events:
         PostConfirmation:
           Type: Cognito
