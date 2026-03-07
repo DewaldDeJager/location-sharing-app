@@ -90,7 +90,7 @@ export async function listGroups(userId: string): Promise<Group[]> {
     })
   );
 
-  return (res.Items || []).map((item: Record<string, NativeAttributeValue>) => {
+  return (res.Items || []).filter((item) => !item.sortKey.includes("#MEMBER#")).map((item: Record<string, NativeAttributeValue>) => {
     const sortKey: string = item.sortKey as string;
     const id = sortKey.startsWith("GROUP#") ? sortKey.substring(6) : sortKey;
     return { id, name: item.name as string };
