@@ -31,8 +31,11 @@ export default function CreateGroupScreen() {
       return;
     }
     setCreating(true);
-    await createGroup(name.trim(), memberIds, selectedMode, temporaryMinutes);
-    setCreating(false);
+    try {
+      await createGroup(name.trim(), memberIds, selectedMode, temporaryMinutes);
+    } finally {
+      setCreating(false);
+    }
     navigation.goBack();
   }, [name, memberIds, selectedMode, temporaryMinutes, isValid, creating, navigation]);
 

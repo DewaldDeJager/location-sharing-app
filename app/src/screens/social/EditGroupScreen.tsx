@@ -97,8 +97,11 @@ export default function EditGroupScreen() {
     ) {
       updates.memberIds = memberIds;
     }
-    await updateGroup(groupId, updates);
-    setSaving(false);
+    try {
+      await updateGroup(groupId, updates);
+    } finally {
+      setSaving(false);
+    }
     navigation.goBack();
   }, [hasChanges, saving, name, memberIds, group, groupId, navigation]);
 

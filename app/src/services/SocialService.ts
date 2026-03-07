@@ -6,6 +6,7 @@
  */
 
 import {fetchFriends} from './FriendsService';
+import {apiFetch, apiFetchJson} from './ApiClient';
 import type {Person, Group, PersonSearchResult} from '../types/social';
 import {
   SharingMode,
@@ -19,11 +20,11 @@ import type {SharingRule, SharingConfig} from '../types/sharing';
 // ---------------------------------------------------------------------------
 
 let mockPeople: Person[] = [
-  {id: 'u1', username: 'alice', displayName: 'Alice Johnson', groupIds: ['g1']},
-  {id: 'u2', username: 'bob', displayName: 'Bob Smith', groupIds: ['g1', 'g2']},
-  {id: 'u3', username: 'carol', displayName: 'Carol Williams', groupIds: ['g2']},
-  {id: 'u4', username: 'dave', displayName: 'Dave Brown', groupIds: []},
-  {id: 'u5', username: 'eve', displayName: 'Eve Davis', groupIds: ['g1']},
+  {id: '22be994a-dd01-45a5-b119-005fa28b3a72', username: 'alice', displayName: 'Alice Johnson', groupIds: ['g1']},
+  {id: '6013c17a-f0a8-4ebd-a0e3-c2b3c966c9fb', username: 'bob', displayName: 'Bob Smith', groupIds: ['g1', 'g2']},
+  {id: '6406ec2b-31db-48ed-aafc-0881530a6f20', username: 'carol', displayName: 'Carol Williams', groupIds: ['g2']},
+  {id: '6b5b7894-9f07-4db2-b513-59dd12494f1b', username: 'dave', displayName: 'Dave Brown', groupIds: []},
+  {id: '97f387e2-523d-4529-886f-579b94d3f0a8', username: 'eve', displayName: 'Eve Davis', groupIds: ['g1']},
 ];
 
 let mockGroups: Group[] = [
@@ -38,11 +39,14 @@ let mockRules: SharingRule[] = [
 ];
 
 const mockSearchDatabase: PersonSearchResult[] = [
-  {id: 'u6', username: 'frank', displayName: 'Frank Miller', isFollowing: false},
-  {id: 'u7', username: 'grace', displayName: 'Grace Lee', isFollowing: false},
-  {id: 'u8', username: 'heidi', displayName: 'Heidi Clark', isFollowing: false},
-  {id: 'u1', username: 'alice', displayName: 'Alice Johnson', isFollowing: true},
-  {id: 'u2', username: 'bob', displayName: 'Bob Smith', isFollowing: true},
+  {id: 'c8782828-6e9a-47d0-91e2-78f36eadfee6', username: 'frank', displayName: 'Frank Miller', isFollowing: false},
+  {id: '6a5caa20-88aa-4fc4-b925-f3e4572dd426', username: 'grace', displayName: 'Grace Lee', isFollowing: false},
+  {id: '3adc17a9-3961-4f73-b15b-2fd6dbd2affe', username: 'heidi', displayName: 'Heidi Clark', isFollowing: false},
+  {id: '22be994a-dd01-45a5-b119-005fa28b3a72', username: 'alice', displayName: 'Alice Johnson', isFollowing: true},
+  {id: '6013c17a-f0a8-4ebd-a0e3-c2b3c966c9fb', username: 'bob', displayName: 'Bob Smith', isFollowing: true},
+  {id: '6406ec2b-31db-48ed-aafc-0881530a6f20', username: 'carol', displayName: 'Carol Williams', isFollowing: true},
+  {id: '6b5b7894-9f07-4db2-b513-59dd12494f1b', username: 'dave', displayName: 'Dave Brown', isFollowing: true},
+  {id: '97f387e2-523d-4529-886f-579b94d3f0a8', username: 'eve', displayName: 'Eve Davis', isFollowing: true},
 ];
 
 // Simulate network delay
@@ -105,16 +109,28 @@ export async function searchPeople(query: string): Promise<PersonSearchResult[]>
 // ---------------------------------------------------------------------------
 
 export async function getGroups(): Promise<Group[]> {
-  await delay();
-  return [...mockGroups].sort((a, b) => a.sortOrder - b.sortOrder);
+  const data = await apiFetchJson<{id: string; name: string}[]>('/groups');
+  return data.map((g, index) => ({
+    id: g.id,
+    name: g.name,
+    memberIds: [],
+    sortOrder: index,
+  }));
 }
 
 export async function getGroup(groupId: string): Promise<Group | undefined> {
-  await delay(100);
-  return mockGroups.find(g => g.id === groupId);
+  try {
+    const data = await apiFetchJson<{id: string; name: string}>(`/groups/${groupId}`);
+    return {
+      id: data.id,
+      name: data.name,
+      memberIds: [],
+      sortOrder: 0,
+    };
+  } catch {
+    return undefined;
+  }
 }
-
-let nextGroupId = 100;
 
 export async function createGroup(
   name: string,
@@ -122,22 +138,19 @@ export async function createGroup(
   ruleMode: SharingMode = SharingMode.DISALLOWED,
   temporaryMinutes?: number,
 ): Promise<Group> {
-  await delay(300);
-  const id = `g-${nextGroupId++}`;
+  const data = await apiFetchJson<{id: string; name: string}>('/groups', {
+    method: 'POST',
+    body: {name, members: memberIds},
+  });
+  const id = data.id;
   const group: Group = {
     id,
-    name,
+    name: data.name,
     memberIds,
-    sortOrder: mockGroups.length,
+    sortOrder: 0,
   };
-  mockGroups.push(group);
 
-  // Update people's groupIds
-  mockPeople = mockPeople.map(p =>
-    memberIds.includes(p.id) ? {...p, groupIds: [...p.groupIds, id]} : p,
-  );
-
-  // Create rule
+  // Create rule - Leave this as a mock for now
   const rule: SharingRule = {
     id: `r-${id}`,
     targetType: SharingTargetType.GROUP,
@@ -158,48 +171,25 @@ export async function updateGroup(
   groupId: string,
   updates: {name?: string; memberIds?: string[]},
 ): Promise<void> {
-  await delay(200);
-  mockGroups = mockGroups.map(g => {
-    if (g.id !== groupId) {
-      return g;
-    }
-    const updated = {...g};
-    if (updates.name !== undefined) {
-      updated.name = updates.name;
-      // Also update rule targetName
-      mockRules = mockRules.map(r =>
-        r.targetId === groupId ? {...r, targetName: updates.name} : r,
-      );
-    }
-    if (updates.memberIds !== undefined) {
-      const oldMemberIds = g.memberIds;
-      const newMemberIds = updates.memberIds;
-      // Remove group from old members not in new list
-      const removed = oldMemberIds.filter(id => !newMemberIds.includes(id));
-      const added = newMemberIds.filter(id => !oldMemberIds.includes(id));
-      mockPeople = mockPeople.map(p => {
-        if (removed.includes(p.id)) {
-          return {...p, groupIds: p.groupIds.filter(gid => gid !== groupId)};
-        }
-        if (added.includes(p.id)) {
-          return {...p, groupIds: [...p.groupIds, groupId]};
-        }
-        return p;
-      });
-      updated.memberIds = newMemberIds;
-    }
-    return updated;
+  const body: {name?: string; members?: string[]} = {};
+  if (updates.name !== undefined) {
+    body.name = updates.name;
+  }
+  if (updates.memberIds !== undefined) {
+    body.members = updates.memberIds;
+  }
+  await apiFetchJson(`/groups/${groupId}`, {
+    method: 'PATCH',
+    body,
   });
 }
 
 export async function deleteGroup(groupId: string): Promise<void> {
-  await delay(200);
-  mockGroups = mockGroups.filter(g => g.id !== groupId);
-  mockPeople = mockPeople.map(p => ({
-    ...p,
-    groupIds: p.groupIds.filter(gid => gid !== groupId),
-  }));
-  mockRules = mockRules.filter(r => r.targetId !== groupId);
+  const res = await apiFetch(`/groups/${groupId}`, {method: 'DELETE'});
+  if (!res.ok && res.status !== 204) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ''}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
