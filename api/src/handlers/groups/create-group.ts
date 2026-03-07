@@ -1,11 +1,6 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
-import { randomUUID } from "crypto";
-
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { createGroup } from "../../services/group-service";
 
 const CreateGroupSchema = z.object({
   name: z.string().min(1, { message: "name is required" }).max(200, { message: "name too long" }),
@@ -53,34 +48,19 @@ export const handler = async (
     };
   }
 
-  const id = randomUUID();
-  const name = parsed.data.name;
-  const tableName = process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
-
   try {
-    await docClient.send(
-      new PutCommand({
-        TableName: tableName,
-        Item: {
-          userId: sub,
-          sortKey: `GROUP#${id}`,
-          name,
-        },
-        ConditionExpression: "attribute_not_exists(userId) AND attribute_not_exists(sortKey)",
-      })
-    );
+    const group = await createGroup(sub, parsed.data.name);
+    return {
+      statusCode: 201,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(group),
+    };
   } catch (err) {
-    console.error("DynamoDB put error", err);
+    console.error("Create group error", err);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }
-
-  return {
-    statusCode: 201,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, name }),
-  };
 };

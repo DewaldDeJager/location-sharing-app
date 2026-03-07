@@ -1,9 +1,5 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
-
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { listFriends } from "../../services/friend-service";
 
 export type FriendLocation = {
   lat: number;
@@ -84,24 +80,16 @@ export const handler = async (
     };
   }
 
-  const tableName = process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
-
-  let followEntries: Array<{ id: string; name?: string }>;
   try {
-    const result = await docClient.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: "userId = :userId AND begins_with(sortKey, :prefix)",
-        ExpressionAttributeValues: {
-          ":userId": sub,
-          ":prefix": "FOLLOW#",
-        },
-      })
-    );
-    followEntries = (result.Items ?? []).map((item) => ({
-      id: item.sortKey.replace("FOLLOW#", ""),
-      name: item.name,
-    }));
+    const followEntries = await listFriends(sub);
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...MOCK_DATA,
+        followEntries,
+      }),
+    };
   } catch (err) {
     console.error("DynamoDB query error", err);
     return {
@@ -110,13 +98,4 @@ export const handler = async (
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }
-
-  return {
-    statusCode: 200,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...MOCK_DATA,
-      followEntries,
-    }),
-  };
 };

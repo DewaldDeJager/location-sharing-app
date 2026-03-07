@@ -1,10 +1,7 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
-
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { processLocation } from "../services/location-service";
+import { ConflictError } from "../domain/types";
 
 export type LocationEvent = {
   latitude: number;
@@ -90,46 +87,20 @@ export const handler = async (
     };
   }
 
-  const tableName = process.env.LOCATION_TABLE_NAME || "LocationData";
-
-  // Write to DynamoDB only if the incoming timestamp is newer than what's stored
   try {
-    await docClient.send(
-      new UpdateCommand({
-        TableName: tableName,
-        Key: { userId: sub }, // TODO: Add the device ID here once we have added it as the sort key
-        UpdateExpression:
-          "SET #lat = :lat, #lng = :lng, #ts = :ts, #deviceId = :deviceId, #tsIso = :tsIso",
-        ExpressionAttributeNames: {
-          "#lat": "latitude",
-          "#lng": "longitude",
-          "#ts": "timestamp",
-          "#tsIso": "timestampIso",
-          "#deviceId": "deviceId",
-        },
-        ExpressionAttributeValues: {
-          ":lat": latitude,
-          ":lng": longitude,
-          ":ts": timestampMs,
-          ":tsIso": timestampIso,
-          ":deviceId": deviceId,
-        },
-        // Allow create when item doesn't exist OR update only if stored timestamp is older
-        ConditionExpression:
-          "attribute_not_exists(userId) OR attribute_not_exists(#ts) OR #ts < :ts",
-        ReturnValues: "NONE",
-      })
-    );
+    await processLocation(sub, { latitude, longitude, deviceId, timestampMs, timestampIso });
+    return {
+      statusCode: 204,
+      headers: { "Content-Type": "application/json" },
+    };
   } catch (err) {
-    if (err instanceof Error && err.name === "ConditionalCheckFailedException") {
-      // Incoming timestamp is not newer than existing
+    if (err instanceof ConflictError) {
       return {
         statusCode: 409,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Ignored older or same timestamp update" }),
+        body: JSON.stringify({ message: err.message }),
       };
     }
-
     console.error("DynamoDB update error", err);
     return {
       statusCode: 500,
@@ -137,9 +108,4 @@ export const handler = async (
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }
-
-  return {
-    statusCode: 204,
-    headers: { "Content-Type": "application/json" },
-  };
 };

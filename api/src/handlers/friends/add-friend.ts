@@ -1,10 +1,6 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
-
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { addFriend } from "../../services/friend-service";
 
 const BodySchema = z.object({
   id: z.string().uuid({ message: "id must be a valid UUID" }),
@@ -45,23 +41,13 @@ export const handler = async (
   }
 
   const { id, name } = parsed.data;
-  const tableName = process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
-
-  const item: Record<string, unknown> = {
-    userId: sub,
-    sortKey: `FOLLOW#${id}`,
-  };
-  if (name !== undefined) {
-    item.name = name;
-  }
 
   try {
-    await docClient.send(
-      new PutCommand({
-        TableName: tableName,
-        Item: item,
-      })
-    );
+    await addFriend(sub, id, name);
+    return {
+      statusCode: 204,
+      headers: { "Content-Type": "application/json" },
+    };
   } catch (err) {
     console.error("DynamoDB put error", err);
     return {
@@ -70,9 +56,4 @@ export const handler = async (
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }
-
-  return {
-    statusCode: 204,
-    headers: { "Content-Type": "application/json" },
-  };
 };

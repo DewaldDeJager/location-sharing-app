@@ -1,10 +1,7 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
-
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { removeGroupMember } from "../../services/group-service";
+import { NotFoundError } from "../../domain/types";
 
 const ParamsSchema = z.object({
   groupId: z.string().uuid({ message: "groupId must be a valid UUID" }),
@@ -41,41 +38,19 @@ export const handler = async (
   }
 
   const { groupId, memberId } = parsedParams.data;
-  const tableName = process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
 
   try {
-    await docClient.send(
-      new TransactWriteCommand({
-        TransactItems: [
-          {
-            Delete: {
-              TableName: tableName,
-              Key: {
-                userId: sub,
-                sortKey: `MEMBER#${memberId}#GROUP#${groupId}`,
-              },
-              ConditionExpression: "attribute_exists(userId) AND attribute_exists(sortKey)",
-            },
-          },
-          {
-            Delete: {
-              TableName: tableName,
-              Key: {
-                userId: sub,
-                sortKey: `GROUP#${groupId}#MEMBER#${memberId}`,
-              },
-              ConditionExpression: "attribute_exists(userId) AND attribute_exists(sortKey)",
-            },
-          },
-        ],
-      })
-    );
+    await removeGroupMember(sub, groupId, memberId);
+    return {
+      statusCode: 204,
+      headers: { "Content-Type": "application/json" },
+    };
   } catch (err) {
-    if (err instanceof Error && err.name === "TransactionCanceledException") {
+    if (err instanceof NotFoundError) {
       return {
         statusCode: 404,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Group member not found" }),
+        body: JSON.stringify({ message: err.message }),
       };
     }
     console.error("DynamoDB transact write error", err);
@@ -85,9 +60,4 @@ export const handler = async (
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }
-
-  return {
-    statusCode: 204,
-    headers: { "Content-Type": "application/json" },
-  };
 };

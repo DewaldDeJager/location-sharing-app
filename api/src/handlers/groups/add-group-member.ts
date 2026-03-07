@@ -1,10 +1,7 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, TransactWriteCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
-
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { addGroupMember } from "../../services/group-service";
+import { NotFoundError, ForbiddenError } from "../../domain/types";
 
 const ParamsSchema = z.object({
   groupId: z.string().uuid({ message: "groupId must be a valid UUID" }),
@@ -41,87 +38,35 @@ export const handler = async (
   }
 
   const { groupId, memberId } = parsedParams.data;
-  const tableName = process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
 
-  let followResult, groupResult;
   try {
-    [followResult, groupResult] = await Promise.all([
-      docClient.send(
-        new GetCommand({
-          TableName: tableName,
-          Key: { userId: sub, sortKey: `FOLLOW#${memberId}` },
-        })
-      ),
-      docClient.send(
-        new GetCommand({
-          TableName: tableName,
-          Key: { userId: sub, sortKey: `GROUP#${groupId}` },
-        })
-      ),
-    ]);
+    await addGroupMember(sub, groupId, memberId);
+    return {
+      statusCode: 204,
+      headers: { "Content-Type": "application/json" },
+    };
   } catch (err) {
-    console.error("DynamoDB get error", err);
+    if (err instanceof ForbiddenError) {
+      return {
+        statusCode: 403,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Forbidden: ${err.message}`,
+        }),
+      };
+    }
+    if (err instanceof NotFoundError) {
+      return {
+        statusCode: 404,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `Not Found: ${err.message}` }),
+      };
+    }
+    console.error("Add group member error", err);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }
-
-  if (!followResult.Item) {
-    return {
-      statusCode: 403,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: "Forbidden: you must be following the member to add them to a group",
-      }),
-    };
-  }
-
-  if (!groupResult.Item) {
-    return {
-      statusCode: 404,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: "Not Found: group does not exist" }),
-    };
-  }
-
-  try {
-    await docClient.send(
-      new TransactWriteCommand({
-        TransactItems: [
-          {
-            Put: {
-              TableName: tableName,
-              Item: {
-                userId: sub,
-                sortKey: `MEMBER#${memberId}#GROUP#${groupId}`,
-              },
-            },
-          },
-          {
-            Put: {
-              TableName: tableName,
-              Item: {
-                userId: sub,
-                sortKey: `GROUP#${groupId}#MEMBER#${memberId}`,
-              },
-            },
-          },
-        ],
-      })
-    );
-  } catch (err) {
-    console.error("DynamoDB transact write error", err);
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: "Internal Server Error" }),
-    };
-  }
-
-  return {
-    statusCode: 204,
-    headers: { "Content-Type": "application/json" },
-  };
 };

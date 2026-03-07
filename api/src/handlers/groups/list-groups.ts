@@ -1,9 +1,5 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand, NativeAttributeValue } from "@aws-sdk/lib-dynamodb";
-
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { listGroups } from "../../services/group-service";
 
 export const handler = async (
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -19,30 +15,8 @@ export const handler = async (
     };
   }
 
-  const tableName = process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
-
   try {
-    const res = await docClient.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: "#pk = :uid AND begins_with(#sk, :prefix)",
-        ExpressionAttributeNames: {
-          "#pk": "userId",
-          "#sk": "sortKey",
-        },
-        ExpressionAttributeValues: {
-          ":uid": sub,
-          ":prefix": "GROUP#",
-        },
-      })
-    );
-
-    const groups = (res.Items || []).map((item: Record<string, NativeAttributeValue>) => {
-      const sortKey: string = item.sortKey as string;
-      const id = sortKey.startsWith("GROUP#") ? sortKey.substring(6) : sortKey;
-      return { id, name: item.name };
-    });
-
+    const groups = await listGroups(sub);
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },

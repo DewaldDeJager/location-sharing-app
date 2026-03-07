@@ -1,10 +1,7 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { z } from "zod";
-
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(client);
+import { updateFriend } from "../../services/friend-service";
+import { NotFoundError } from "../../domain/types";
 
 const ParamsSchema = z.object({
   id: z.string().uuid({ message: "id must be a valid UUID" }),
@@ -59,30 +56,18 @@ export const handler = async (
     };
   }
 
-  const { id } = parsedParams.data;
-  const { name } = parsedBody.data;
-  const tableName = process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
-
   try {
-    await docClient.send(
-      new UpdateCommand({
-        TableName: tableName,
-        Key: {
-          userId: sub,
-          sortKey: `FOLLOW#${id}`,
-        },
-        ConditionExpression: "attribute_exists(userId) AND attribute_exists(sortKey)",
-        UpdateExpression: "SET #name = :name",
-        ExpressionAttributeNames: { "#name": "name" },
-        ExpressionAttributeValues: { ":name": name ?? null },
-      })
-    );
+    await updateFriend(sub, parsedParams.data.id, parsedBody.data.name);
+    return {
+      statusCode: 204,
+      headers: { "Content-Type": "application/json" },
+    };
   } catch (err) {
-    if (err instanceof Error && err.name === "ConditionalCheckFailedException") {
+    if (err instanceof NotFoundError) {
       return {
         statusCode: 404,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Friend not found" }),
+        body: JSON.stringify({ message: err.message }),
       };
     }
     console.error("DynamoDB update error", err);
@@ -92,9 +77,4 @@ export const handler = async (
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }
-
-  return {
-    statusCode: 204,
-    headers: { "Content-Type": "application/json" },
-  };
 };
