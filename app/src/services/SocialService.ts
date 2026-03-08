@@ -57,35 +57,24 @@ const delay = (ms: number = 300) => new Promise<void>(res => setTimeout(res, ms)
 // ---------------------------------------------------------------------------
 
 export async function getPeople(): Promise<Person[]> {
-  await delay();
-  return [...mockPeople];
+  const data = await fetchFriends();
+  return data.map(f => ({
+    id: f.id,
+    username: f.username,
+    displayName: f.name,
+    groupIds: f.groups.map(g => g.id),
+  }));
 }
 
 export async function followPerson(personId: string): Promise<void> {
-  await delay(200);
-  const result = mockSearchDatabase.find(p => p.id === personId);
-  if (result && !mockPeople.find(p => p.id === personId)) {
-    mockPeople.push({
-      id: result.id,
-      username: result.username,
-      displayName: result.displayName,
-      groupIds: [],
-    });
-  }
+  await apiFetch('/friends', {
+    method: 'POST',
+    body: {id: personId} as any,
+  });
 }
 
 export async function unfollowPerson(personId: string): Promise<void> {
-  await delay(200);
-  mockPeople = mockPeople.filter(p => p.id !== personId);
-  // Also remove from groups
-  mockGroups = mockGroups.map(g => ({
-    ...g,
-    memberIds: g.memberIds.filter(id => id !== personId),
-  }));
-  // Remove user rules
-  mockRules = mockRules.filter(
-    r => !(r.targetType === SharingTargetType.USER && r.targetId === personId),
-  );
+  await apiFetch(`/friends/${personId}`, {method: 'DELETE'});
 }
 
 export async function searchPeople(query: string): Promise<PersonSearchResult[]> {
