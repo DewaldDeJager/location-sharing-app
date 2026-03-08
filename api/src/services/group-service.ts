@@ -97,9 +97,9 @@ export async function listGroups(
     })
   );
 
-  const groupMembers = new Map<string, Array<String>>();
+  const groupMembers = new Map<string, Array<string>>();
   if (includeMembers) {
-    const members = (res.Items || [])
+    (res.Items || [])
       .filter((item) => item.sortKey.includes("#MEMBER#"))
       .forEach((item: Record<string, NativeAttributeValue>) => {
         const sortKey: string = item.sortKey as string;

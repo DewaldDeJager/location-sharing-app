@@ -1,7 +1,7 @@
 export interface Group {
   id: string;
   name?: string;
-  members?: Array<String>;
+  members?: Array<string>;
 }
 
 export interface Friend {
