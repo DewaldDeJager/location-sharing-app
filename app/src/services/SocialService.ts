@@ -97,12 +97,12 @@ export async function searchPeople(query: string): Promise<PersonSearchResult[]>
 // Groups
 // ---------------------------------------------------------------------------
 
-export async function getGroups(): Promise<Group[]> {
-  const data = await apiFetchJson<{id: string; name: string}[]>('/groups');
+export async function getGroups(includeMembers: boolean = false): Promise<Group[]> {
+  const data = await apiFetchJson<{id: string; name: string; members: any[]}[]>('/groups?' + new URLSearchParams({includeMembers: true}).toString());
   return data.map((g, index) => ({
     id: g.id,
     name: g.name,
-    memberIds: [],
+    memberIds: g?.members ?? [],
     sortOrder: index,
   }));
 }
