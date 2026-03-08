@@ -10,8 +10,9 @@ import {
   TransactWriteCommand,
   NativeAttributeValue,
 } from "@aws-sdk/lib-dynamodb";
-import { Friend, NotFoundError } from "../domain/types";
+import { Friend, Group, NotFoundError } from "../domain/types";
 import { getUserProfile } from "./user-profile-service";
+import { listGroups } from "./group-service";
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(client);
@@ -62,14 +63,16 @@ export async function getFriend(userId: string, id: string): Promise<Friend> {
   const name = result.Item.name ?? profile.name;
 
   return {
-    id,
-    name,
+    id: id,
+    name: name,
+    username: profile.username,
   };
 }
 
 export async function listFriends(
-  userId: string
-): Promise<Array<{ id: string; name?: string }>> {
+  userId: string,
+  includeGroups: boolean = true
+): Promise<Array<Friend>> {
   const tableName = getTableName();
 
   const result = await docClient.send(
@@ -82,26 +85,40 @@ export async function listFriends(
       },
     })
   );
-  
-  
+
+  const groupsPerFriend = new Map<string, Array<Group>>();
+  if (includeGroups) {
+    const groups = await listGroups(userId, true);
+    for (const group of groups) {
+      const friendIds = group.members || [];
+      for (const friendId of friendIds) {
+        if (groupsPerFriend.has(friendId)) {
+          groupsPerFriend.get(friendId)?.push({ id: group.id, name: group.name });
+        } else {
+          groupsPerFriend.set(friendId, [{ id: group.id, name: group.name }]);
+        }
+      }
+    }
+  }
 
   const friends = await Promise.all(
     (result.Items ?? []).map(async (item) => {
       const id = item.sortKey.replace("FOLLOW#", "");
       const profile = await getUserProfile(id);
       const name = item.name ?? profile.name;
-      return { id, name };
+      return {
+        id: id,
+        name: name,
+        username: profile.username,
+        groups: includeGroups ? (groupsPerFriend.get(id) ?? []) : undefined,
+      };
     })
   );
 
   return friends;
 }
 
-export async function updateFriend(
-  userId: string,
-  id: string,
-  name?: string
-): Promise<void> {
+export async function updateFriend(userId: string, id: string, name?: string): Promise<void> {
   const tableName = getTableName();
 
   try {

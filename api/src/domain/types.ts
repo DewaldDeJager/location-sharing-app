@@ -6,7 +6,9 @@ export interface Group {
 
 export interface Friend {
   id: string;
+  username: string;
   name?: string;
+  groups?: Array<Group>;
 }
 
 export interface LocationData {
