@@ -22,7 +22,11 @@ function getTableName(): string {
   return process.env.SOCIAL_GRAPH_TABLE_NAME || "SocialGraph";
 }
 
-export async function createGroup(userId: string, name: string, members?: string[]): Promise<Group> {
+export async function createGroup(
+  userId: string,
+  name: string,
+  members?: string[]
+): Promise<Group> {
   const id = randomUUID();
   const tableName = getTableName();
 
@@ -72,7 +76,10 @@ export async function getGroup(userId: string, id: string): Promise<Group> {
   return { id, name: name as string };
 }
 
-export async function listGroups(userId: string): Promise<Group[]> {
+export async function listGroups(
+  userId: string,
+  includeMembers: boolean = false
+): Promise<Group[]> {
   const tableName = getTableName();
 
   const res = await docClient.send(
@@ -90,11 +97,35 @@ export async function listGroups(userId: string): Promise<Group[]> {
     })
   );
 
-  return (res.Items || []).filter((item) => !item.sortKey.includes("#MEMBER#")).map((item: Record<string, NativeAttributeValue>) => {
-    const sortKey: string = item.sortKey as string;
-    const id = sortKey.startsWith("GROUP#") ? sortKey.substring(6) : sortKey;
-    return { id, name: item.name as string };
-  });
+  const groupMembers = new Map<string, Array<String>>();
+  if (includeMembers) {
+    const members = (res.Items || [])
+      .filter((item) => item.sortKey.includes("#MEMBER#"))
+      .forEach((item: Record<string, NativeAttributeValue>) => {
+        const sortKey: string = item.sortKey as string;
+        // Example of sortKey: GROUP#12e49d15-320e-4962-8d31-be3aff951e1c#MEMBER#6406ec2b-31db-48ed-aafc-0881530a6f20
+        const output = sortKey.split("#");
+        const groupId = output[1];
+        const memberId = output[3];
+
+        if (groupMembers.has(groupId)) {
+          groupMembers.get(groupId)?.push(memberId);
+        } else {
+          groupMembers.set(groupId, [memberId]);
+        }
+      });
+  }
+
+  const groups = (res.Items || [])
+    .filter((item) => !item.sortKey.includes("#MEMBER#"))
+    .map((item: Record<string, NativeAttributeValue>) => {
+      const sortKey: string = item.sortKey as string;
+      const id = sortKey.startsWith("GROUP#") ? sortKey.substring(6) : sortKey;
+      const members = includeMembers ? groupMembers.get(id) : undefined;
+      return { id, name: item.name as string, members: members };
+    });
+
+  return groups;
 }
 
 export async function updateGroup(

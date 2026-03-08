@@ -1,5 +1,14 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from "aws-lambda";
+import { z } from "zod";
 import { listGroups } from "../../services/group-service";
+
+const ListGroupsSchema = z.object({
+  includeMembers: z
+    .string()
+    .optional()
+    .transform((val) => (val === undefined ? false : val !== "false"))
+    .pipe(z.boolean()),
+});
 
 export const handler = async (
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -15,8 +24,19 @@ export const handler = async (
     };
   }
 
+  const queryResult = ListGroupsSchema.safeParse(event.queryStringParameters ?? {});
+  if (!queryResult.success) {
+    return {
+      statusCode: 400,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "Bad Request", errors: queryResult.error.errors }),
+    };
+  }
+
+  const { includeMembers } = queryResult.data;
+
   try {
-    const groups = await listGroups(sub);
+    const groups = await listGroups(sub, includeMembers);
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
