@@ -39,7 +39,7 @@ export default function PersonDetailScreen() {
     setLoading(true);
     const [people, g, r] = await Promise.all([
       getPeople(),
-      getGroups(),
+      getGroups(true),
       getSharingRules(),
     ]);
     setPerson(people.find(p => p.id === personId) ?? null);

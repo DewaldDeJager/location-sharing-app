@@ -5,52 +5,134 @@
  * API calls when backend is available.
  */
 
-import {fetchFriends} from './FriendsService';
-import {apiFetch, apiFetchJson} from './ApiClient';
-import type {Person, Group, PersonSearchResult} from '../types/social';
+import { fetchFriends } from './FriendsService';
+import { apiFetch, apiFetchJson } from './ApiClient';
+import type { Person, Group, PersonSearchResult } from '../types/social';
 import {
   SharingMode,
   SharingTargetType,
   computeEndsAt,
 } from '../types/sharing';
-import type {SharingRule, SharingConfig} from '../types/sharing';
+import type { SharingRule, SharingConfig } from '../types/sharing';
 
 // ---------------------------------------------------------------------------
 // In-memory mock state (replace with real API calls)
 // ---------------------------------------------------------------------------
 
 let mockPeople: Person[] = [
-  {id: '22be994a-dd01-45a5-b119-005fa28b3a72', username: 'alice', displayName: 'Alice Johnson', groupIds: ['g1']},
-  {id: '6013c17a-f0a8-4ebd-a0e3-c2b3c966c9fb', username: 'bob', displayName: 'Bob Smith', groupIds: ['g1', 'g2']},
-  {id: '6406ec2b-31db-48ed-aafc-0881530a6f20', username: 'carol', displayName: 'Carol Williams', groupIds: ['g2']},
-  {id: '6b5b7894-9f07-4db2-b513-59dd12494f1b', username: 'dave', displayName: 'Dave Brown', groupIds: []},
-  {id: '97f387e2-523d-4529-886f-579b94d3f0a8', username: 'eve', displayName: 'Eve Davis', groupIds: ['g1']},
+  {
+    id: '22be994a-dd01-45a5-b119-005fa28b3a72',
+    username: 'alice',
+    displayName: 'Alice Johnson',
+    groupIds: ['g1'],
+  },
+  {
+    id: '6013c17a-f0a8-4ebd-a0e3-c2b3c966c9fb',
+    username: 'bob',
+    displayName: 'Bob Smith',
+    groupIds: ['g1', 'g2'],
+  },
+  {
+    id: '6406ec2b-31db-48ed-aafc-0881530a6f20',
+    username: 'carol',
+    displayName: 'Carol Williams',
+    groupIds: ['g2'],
+  },
+  {
+    id: '6b5b7894-9f07-4db2-b513-59dd12494f1b',
+    username: 'dave',
+    displayName: 'Dave Brown',
+    groupIds: [],
+  },
+  {
+    id: '97f387e2-523d-4529-886f-579b94d3f0a8',
+    username: 'eve',
+    displayName: 'Eve Davis',
+    groupIds: ['g1'],
+  },
 ];
 
 let mockGroups: Group[] = [
-  {id: 'g1', name: 'Family', memberIds: ['u1', 'u2', 'u5'], sortOrder: 0},
-  {id: 'g2', name: 'Close Friends', memberIds: ['u2', 'u3'], sortOrder: 1},
+  { id: 'g1', name: 'Family', memberIds: ['u1', 'u2', 'u5'], sortOrder: 0 },
+  { id: 'g2', name: 'Close Friends', memberIds: ['u2', 'u3'], sortOrder: 1 },
 ];
 
 let mockRules: SharingRule[] = [
-  {id: 'r-public', targetType: SharingTargetType.PUBLIC, mode: SharingMode.DISALLOWED},
-  {id: 'r-g1', targetType: SharingTargetType.GROUP, targetId: 'g1', targetName: 'Family', mode: SharingMode.ALWAYS},
-  {id: 'r-g2', targetType: SharingTargetType.GROUP, targetId: 'g2', targetName: 'Close Friends', mode: SharingMode.DISALLOWED},
+  {
+    id: 'r-public',
+    targetType: SharingTargetType.PUBLIC,
+    mode: SharingMode.DISALLOWED,
+  },
+  {
+    id: 'r-g1',
+    targetType: SharingTargetType.GROUP,
+    targetId: 'g1',
+    targetName: 'Family',
+    mode: SharingMode.ALWAYS,
+  },
+  {
+    id: 'r-g2',
+    targetType: SharingTargetType.GROUP,
+    targetId: 'g2',
+    targetName: 'Close Friends',
+    mode: SharingMode.DISALLOWED,
+  },
 ];
 
 const mockSearchDatabase: PersonSearchResult[] = [
-  {id: 'c8782828-6e9a-47d0-91e2-78f36eadfee6', username: 'frank', displayName: 'Frank Miller', isFollowing: false},
-  {id: '6a5caa20-88aa-4fc4-b925-f3e4572dd426', username: 'grace', displayName: 'Grace Lee', isFollowing: false},
-  {id: '3adc17a9-3961-4f73-b15b-2fd6dbd2affe', username: 'heidi', displayName: 'Heidi Clark', isFollowing: false},
-  {id: '22be994a-dd01-45a5-b119-005fa28b3a72', username: 'alice', displayName: 'Alice Johnson', isFollowing: true},
-  {id: '6013c17a-f0a8-4ebd-a0e3-c2b3c966c9fb', username: 'bob', displayName: 'Bob Smith', isFollowing: true},
-  {id: '6406ec2b-31db-48ed-aafc-0881530a6f20', username: 'carol', displayName: 'Carol Williams', isFollowing: true},
-  {id: '6b5b7894-9f07-4db2-b513-59dd12494f1b', username: 'dave', displayName: 'Dave Brown', isFollowing: true},
-  {id: '97f387e2-523d-4529-886f-579b94d3f0a8', username: 'eve', displayName: 'Eve Davis', isFollowing: true},
+  {
+    id: 'c8782828-6e9a-47d0-91e2-78f36eadfee6',
+    username: 'frank',
+    displayName: 'Frank Miller',
+    isFollowing: false,
+  },
+  {
+    id: '6a5caa20-88aa-4fc4-b925-f3e4572dd426',
+    username: 'grace',
+    displayName: 'Grace Lee',
+    isFollowing: false,
+  },
+  {
+    id: '3adc17a9-3961-4f73-b15b-2fd6dbd2affe',
+    username: 'heidi',
+    displayName: 'Heidi Clark',
+    isFollowing: false,
+  },
+  {
+    id: '22be994a-dd01-45a5-b119-005fa28b3a72',
+    username: 'alice',
+    displayName: 'Alice Johnson',
+    isFollowing: true,
+  },
+  {
+    id: '6013c17a-f0a8-4ebd-a0e3-c2b3c966c9fb',
+    username: 'bob',
+    displayName: 'Bob Smith',
+    isFollowing: true,
+  },
+  {
+    id: '6406ec2b-31db-48ed-aafc-0881530a6f20',
+    username: 'carol',
+    displayName: 'Carol Williams',
+    isFollowing: true,
+  },
+  {
+    id: '6b5b7894-9f07-4db2-b513-59dd12494f1b',
+    username: 'dave',
+    displayName: 'Dave Brown',
+    isFollowing: true,
+  },
+  {
+    id: '97f387e2-523d-4529-886f-579b94d3f0a8',
+    username: 'eve',
+    displayName: 'Eve Davis',
+    isFollowing: true,
+  },
 ];
 
 // Simulate network delay
-const delay = (ms: number = 300) => new Promise<void>(res => setTimeout(res, ms));
+const delay = (ms: number = 300) =>
+  new Promise<void>(res => setTimeout(res, ms));
 
 // ---------------------------------------------------------------------------
 // People
@@ -69,15 +151,17 @@ export async function getPeople(): Promise<Person[]> {
 export async function followPerson(personId: string): Promise<void> {
   await apiFetch('/friends', {
     method: 'POST',
-    body: {id: personId} as any,
+    body: { id: personId } as any,
   });
 }
 
 export async function unfollowPerson(personId: string): Promise<void> {
-  await apiFetch(`/friends/${personId}`, {method: 'DELETE'});
+  await apiFetch(`/friends/${personId}`, { method: 'DELETE' });
 }
 
-export async function searchPeople(query: string): Promise<PersonSearchResult[]> {
+export async function searchPeople(
+  query: string,
+): Promise<PersonSearchResult[]> {
   await delay(400);
   if (!query.trim()) {
     return [];
@@ -90,15 +174,24 @@ export async function searchPeople(query: string): Promise<PersonSearchResult[]>
         p.username.toLowerCase().includes(q) ||
         p.displayName.toLowerCase().includes(q),
     )
-    .map(p => ({...p, isFollowing: followedIds.has(p.id)}));
+    .map(p => ({ ...p, isFollowing: followedIds.has(p.id) }));
 }
 
 // ---------------------------------------------------------------------------
 // Groups
 // ---------------------------------------------------------------------------
 
-export async function getGroups(includeMembers: boolean = false): Promise<Group[]> {
-  const data = await apiFetchJson<{id: string; name: string; members: any[]}[]>('/groups?' + new URLSearchParams({includeMembers: true}).toString());
+export async function getGroups(
+  includeMembers: boolean = false,
+): Promise<Group[]> {
+  const data = await apiFetchJson<
+    { id: string; name: string; members: any[] }[]
+  >(
+    '/groups?' +
+      new URLSearchParams({
+        includeMembers: String(includeMembers),
+      }).toString(),
+  );
   return data.map((g, index) => ({
     id: g.id,
     name: g.name,
@@ -109,11 +202,20 @@ export async function getGroups(includeMembers: boolean = false): Promise<Group[
 
 export async function getGroup(groupId: string): Promise<Group | undefined> {
   try {
-    const data = await apiFetchJson<{id: string; name: string}>(`/groups/${groupId}`);
+    const data = await apiFetchJson<{
+      id: string;
+      name: string;
+      members: string[];
+    }>(
+      `/groups/${groupId}?` + new URLSearchParams({
+          includeMembers: 'true',
+        }).toString(),
+    );
+    console.log(JSON.stringify(data));
     return {
       id: data.id,
       name: data.name,
-      memberIds: [],
+      memberIds: data.members ?? [],
       sortOrder: 0,
     };
   } catch {
@@ -127,9 +229,9 @@ export async function createGroup(
   ruleMode: SharingMode = SharingMode.DISALLOWED,
   temporaryMinutes?: number,
 ): Promise<Group> {
-  const data = await apiFetchJson<{id: string; name: string}>('/groups', {
+  const data = await apiFetchJson<{ id: string; name: string }>('/groups', {
     method: 'POST',
-    body: {name, members: memberIds},
+    body: { name, members: memberIds },
   });
   const id = data.id;
   const group: Group = {
@@ -158,9 +260,9 @@ export async function createGroup(
 
 export async function updateGroup(
   groupId: string,
-  updates: {name?: string; memberIds?: string[]},
+  updates: { name?: string; memberIds?: string[] },
 ): Promise<void> {
-  const body: {name?: string; members?: string[]} = {};
+  const body: { name?: string; members?: string[] } = {};
   if (updates.name !== undefined) {
     body.name = updates.name;
   }
@@ -174,10 +276,12 @@ export async function updateGroup(
 }
 
 export async function deleteGroup(groupId: string): Promise<void> {
-  const res = await apiFetch(`/groups/${groupId}`, {method: 'DELETE'});
+  const res = await apiFetch(`/groups/${groupId}`, { method: 'DELETE' });
   if (!res.ok && res.status !== 204) {
     const text = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ''}`);
+    throw new Error(
+      `${res.status} ${res.statusText}${text ? `: ${text}` : ''}`,
+    );
   }
 }
 
@@ -201,7 +305,9 @@ export async function updateSharingRule(
   const existing = mockRules.find(
     r =>
       r.targetType === targetType &&
-      (targetId ? r.targetId === targetId : r.targetType === SharingTargetType.PUBLIC),
+      (targetId
+        ? r.targetId === targetId
+        : r.targetType === SharingTargetType.PUBLIC),
   );
 
   const endsAt =
@@ -210,7 +316,7 @@ export async function updateSharingRule(
       : undefined;
 
   if (existing) {
-    const updated = {...existing, mode, endsAt};
+    const updated = { ...existing, mode, endsAt };
     mockRules = mockRules.map(r => (r.id === existing.id ? updated : r));
     return updated;
   }
@@ -243,9 +349,11 @@ export async function stopSharing(
   mockRules = mockRules.map(r => {
     if (
       r.targetType === targetType &&
-      (targetId ? r.targetId === targetId : r.targetType === SharingTargetType.PUBLIC)
+      (targetId
+        ? r.targetId === targetId
+        : r.targetType === SharingTargetType.PUBLIC)
     ) {
-      return {...r, mode: SharingMode.DISALLOWED, endsAt: undefined};
+      return { ...r, mode: SharingMode.DISALLOWED, endsAt: undefined };
     }
     return r;
   });
@@ -261,13 +369,15 @@ export async function extendSharing(
   mockRules = mockRules.map(r => {
     if (
       r.targetType === targetType &&
-      (targetId ? r.targetId === targetId : r.targetType === SharingTargetType.PUBLIC)
+      (targetId
+        ? r.targetId === targetId
+        : r.targetType === SharingTargetType.PUBLIC)
     ) {
       const currentEnd = r.endsAt ? new Date(r.endsAt).getTime() : Date.now();
       const newEnd = new Date(
         Math.max(currentEnd, Date.now()) + additionalMinutes * 60 * 1000,
       ).toISOString();
-      updated = {...r, endsAt: newEnd};
+      updated = { ...r, endsAt: newEnd };
       return updated;
     }
     return r;

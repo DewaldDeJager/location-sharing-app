@@ -26,7 +26,7 @@ export default function GroupsScreen() {
     setLoading(true);
     const [p, g, r] = await Promise.all([
       getPeople(),
-      getGroups(),
+      getGroups(true),
       getSharingRules(),
     ]);
     setPeople(p);
