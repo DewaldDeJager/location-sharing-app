@@ -55,25 +55,70 @@ export async function createGroup(
   return { id, name };
 }
 
-export async function getGroup(userId: string, id: string): Promise<Group> {
+export async function getGroup(
+  userId: string,
+  id: string,
+  includeMembers: boolean = false
+): Promise<Group> {
   const tableName = getTableName();
 
-  const res = await docClient.send(
-    new GetCommand({
-      TableName: tableName,
-      Key: {
-        userId,
-        sortKey: `GROUP#${id}`,
-      },
-    })
-  );
+  if (!includeMembers) {
+    const res = await docClient.send(
+      new GetCommand({
+        TableName: tableName,
+        Key: {
+          userId,
+          sortKey: `GROUP#${id}`,
+        },
+      })
+    );
 
-  if (!res.Item) {
-    throw new NotFoundError("Group not found");
+    if (!res.Item) {
+      throw new NotFoundError("Group not found");
+    }
+
+    const name = (res.Item as Record<string, NativeAttributeValue>).name;
+    return { id, name: name as string };
+  } else {
+    const res = await docClient.send(
+      new QueryCommand({
+        TableName: tableName,
+        KeyConditionExpression: "#pk = :uid AND begins_with(#sk, :prefix)",
+        ExpressionAttributeNames: {
+          "#pk": "userId",
+          "#sk": "sortKey",
+        },
+        ExpressionAttributeValues: {
+          ":uid": userId,
+          ":prefix": `GROUP#${id}`,
+        },
+      })
+    );
+
+    const records = res.Items || [];
+
+    if (records.length === 0) {
+      throw new NotFoundError("Group not found");
+    }
+
+    const groupMembers = new Array<string>();
+    const group: Group = { id: id };
+    records.forEach((item: Record<string, NativeAttributeValue>) => {
+      if (item.sortKey.includes("#MEMBER#")) {
+        const sortKey: string = item.sortKey as string;
+        // Example of sortKey: GROUP#12e49d15-320e-4962-8d31-be3aff951e1c#MEMBER#6406ec2b-31db-48ed-aafc-0881530a6f20
+        const output = sortKey.split("#");
+        const memberId = output[3];
+
+        groupMembers.push(memberId);
+      } else {
+        group.name = item.name;
+      }
+    });
+
+    group.members = groupMembers;
+    return group;
   }
-
-  const name = (res.Item as Record<string, NativeAttributeValue>).name;
-  return { id, name: name as string };
 }
 
 export async function listGroups(

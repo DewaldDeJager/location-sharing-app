@@ -7,6 +7,14 @@ const ParamsSchema = z.object({
   id: z.string().uuid({ message: "id must be a valid UUID" }),
 });
 
+const QueryParamsSchema = z.object({
+  includeMembers: z
+    .string()
+    .optional()
+    .transform((val) => (val === undefined ? false : val !== "false"))
+    .pipe(z.boolean()),
+});
+
 export const handler = async (
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> => {
@@ -30,8 +38,17 @@ export const handler = async (
     };
   }
 
+  const query = QueryParamsSchema.safeParse(event.queryStringParameters ?? {});
+  if (!query.success) {
+    return {
+      statusCode: 400,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "Invalid query parameters", issues: query.error.format() }),
+    };
+  }
+
   try {
-    const group = await getGroup(sub, parsed.data.id);
+    const group = await getGroup(sub, parsed.data.id, query.data.includeMembers);
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
