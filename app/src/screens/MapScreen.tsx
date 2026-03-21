@@ -7,6 +7,8 @@ import {Screen, Box, Text} from '../theme';
 import type {Theme} from '../theme';
 import {subscribeToLocation, startLocationTracking} from '../services/LocationService';
 import type {Location} from '../services/LocationService';
+import {getPeople} from '../services/SocialService';
+import type {Person} from '../types/social';
 
 type FriendMarker = {
   lat: number;
@@ -34,6 +36,7 @@ function MapScreen({route}: MapScreenProps) {
   const [isFollowing, setIsFollowing] = useState<boolean>(true);
   const [focusTarget, setFocusTarget] = useState<'me' | 'friend' | null>(null);
   const isAnimatingRef = useRef(false);
+  const [friends, setFriends] = useState<Person[]>([]);
 
   useEffect(() => {
     const unsubscribe = subscribeToLocation(loc => {
@@ -43,6 +46,24 @@ function MapScreen({route}: MapScreenProps) {
 
     return () => {
       unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchFriends = async () => {
+      try {
+        const data = await getPeople();
+        if (!cancelled) {
+          setFriends(data);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch friends:', e);
+      }
+    };
+    fetchFriends();
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -178,6 +199,35 @@ function MapScreen({route}: MapScreenProps) {
             pinColor="blue"
           />
         )}
+        {friends
+          .filter(f => f.location)
+          .map(f => (
+            <Marker
+              key={f.id}
+              coordinate={{
+                latitude: f.location!.latitude,
+                longitude: f.location!.longitude,
+              }}
+              title={f.displayName}
+              description={`${f.displayName}'s last known location`}
+              pinColor="blue"
+              onPress={() => {
+                const friendRegion: Region = {
+                  latitude: f.location!.latitude,
+                  longitude: f.location!.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                };
+                setIsFollowing(true);
+                setFocusTarget('friend');
+                if (mapRef.current) {
+                  isAnimatingRef.current = true;
+                  mapRef.current.animateToRegion(friendRegion, 500);
+                }
+                setRegion(friendRegion);
+              }}
+            />
+          ))}
       </MapView>
       <TouchableOpacity
         style={styles.myLocationButton}

@@ -5,6 +5,7 @@ export type Person = {
   displayName: string;
   avatarUrl?: string;
   groupIds: string[];
+  location?: FriendLocation;
 };
 
 /** A group of people. */

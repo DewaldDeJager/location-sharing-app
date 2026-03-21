@@ -149,6 +149,7 @@ export async function getPeople(): Promise<Person[]> {
     username: f.username,
     displayName: f.name ?? f.username,
     groupIds: f.groups.map(g => g.id),
+    location: f.location,
   }));
 }
 
