@@ -15,7 +15,7 @@ export interface Friend {
 export interface LocationData {
   latitude: number;
   longitude: number;
-  deviceId: string;
+  deviceId?: string;
   timestampIso: string;
   timestampMs: number;
 }

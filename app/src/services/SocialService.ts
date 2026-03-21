@@ -5,9 +5,13 @@
  * API calls when backend is available.
  */
 
-import { fetchFriends } from './FriendsService';
 import { apiFetch, apiFetchJson } from './ApiClient';
-import type { Person, Group, PersonSearchResult } from '../types/social';
+import type {
+  Person,
+  Group,
+  PersonSearchResult,
+  Friend,
+} from '../types/social';
 import {
   SharingMode,
   SharingTargetType,
@@ -139,11 +143,11 @@ const delay = (ms: number = 300) =>
 // ---------------------------------------------------------------------------
 
 export async function getPeople(): Promise<Person[]> {
-  const data = await fetchFriends();
-  return data.map(f => ({
+  const data = await apiFetchJson<Array<Friend>>('/friends');
+  return data.map((f: Friend) => ({
     id: f.id,
     username: f.username,
-    displayName: f.name,
+    displayName: f.name ?? f.username,
     groupIds: f.groups.map(g => g.id),
   }));
 }

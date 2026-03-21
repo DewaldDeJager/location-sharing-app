@@ -15,6 +15,26 @@ export type Group = {
   sortOrder: number;
 };
 
+export type FriendLocation = {
+  latitude: number;
+  longitude: number;
+  timestampIso: string;
+  timestampMs: number;
+};
+
+export type Friend = {
+  id: string;
+  name?: string;
+  username: string;
+  groups: BasicGroup[];
+  location?: FriendLocation;
+};
+
+export type BasicGroup = {
+  id: string;
+  name: string;
+};
+
 /** Visibility reason explaining why a person can (or cannot) see my location. */
 export type VisibilityReason =
   | 'public'    // Public rule allows everyone
