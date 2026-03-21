@@ -159,3 +159,30 @@ export async function getProfile(
     geocoding: { formattedAddress, timeZoneId, timeZoneName },
   };
 }
+
+export async function getUserLocation(userId: string): Promise<LocationData | null> {
+  const tableName = process.env.LOCATION_TABLE_NAME || "LocationData";
+
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: tableName,
+      Key: { userId }, // TODO: Add the device ID here once we have added it as the sort key
+    })
+  );
+
+  const item = result.Item;
+
+  if (!item) {
+    return null;
+  }
+
+  const userLocation: LocationData = {
+    deviceId: item.deviceId,
+    latitude: item.latitude,
+    longitude: item.longitude,
+    timestampMs: item.timestampMs,
+    timestampIso: item.timestampIso,
+  };
+
+  return userLocation;
+}

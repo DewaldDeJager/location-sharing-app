@@ -13,6 +13,7 @@ import {
 import { Friend, Group, NotFoundError } from "../domain/types";
 import { getUserProfile } from "./user-profile-service";
 import { listGroups } from "./group-service";
+import { getUserLocation } from "./location-service";
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(client);
@@ -60,12 +61,14 @@ export async function getFriend(userId: string, id: string): Promise<Friend> {
   }
 
   const profile = await getUserProfile(id);
-  const name = result.Item.name ?? profile.name;
+  const name = result.Item.name ?? profile?.name;
+  const location = await getUserLocation(id);
 
   return {
     id: id,
     name: name,
-    username: profile.username,
+    username: profile!.username,
+    location: location ?? undefined,
   };
 }
 
@@ -105,12 +108,15 @@ export async function listFriends(
     (result.Items ?? []).map(async (item) => {
       const id = item.sortKey.replace("FOLLOW#", "");
       const profile = await getUserProfile(id);
-      const name = item.name ?? profile.name;
+      const name = item.name ?? profile?.name;
+
+      const location = await getUserLocation(id);
       return {
         id: id,
         name: name,
-        username: profile.username,
+        username: profile!.username,
         groups: includeGroups ? (groupsPerFriend.get(id) ?? []) : undefined,
+        location: location ?? undefined,
       };
     })
   );

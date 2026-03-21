@@ -255,11 +255,14 @@ Resources:
           ENVIRONMENT: !Ref EnvironmentName
           SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
           USER_PROFILE_TABLE_NAME: !Ref UserProfileTable
+          LOCATION_TABLE_NAME: !Ref LocationDataTable
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref SocialGraphTable
         - DynamoDBReadPolicy:
             TableName: !Ref UserProfileTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref LocationDataTable
       Events:
         GetFriends:
           Type: HttpApi
@@ -287,11 +290,14 @@ Resources:
           ENVIRONMENT: !Ref EnvironmentName
           SOCIAL_GRAPH_TABLE_NAME: !Ref SocialGraphTable
           USER_PROFILE_TABLE_NAME: !Ref UserProfileTable
+          LOCATION_TABLE_NAME: !Ref LocationDataTable
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref SocialGraphTable
         - DynamoDBReadPolicy:
             TableName: !Ref UserProfileTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref LocationDataTable
       Events:
         GetFriends:
           Type: HttpApi

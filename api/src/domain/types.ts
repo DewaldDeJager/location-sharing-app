@@ -9,6 +9,7 @@ export interface Friend {
   username: string;
   name?: string;
   groups?: Array<Group>;
+  location?: LocationData;
 }
 
 export interface LocationData {
