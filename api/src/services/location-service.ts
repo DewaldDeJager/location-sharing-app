@@ -177,10 +177,9 @@ export async function getUserLocation(userId: string): Promise<LocationData | nu
   }
 
   const userLocation: LocationData = {
-    deviceId: item.deviceId,
     latitude: item.latitude,
     longitude: item.longitude,
-    timestampMs: item.timestampMs,
+    timestampMs: item.timestamp,
     timestampIso: item.timestampIso,
   };
 
